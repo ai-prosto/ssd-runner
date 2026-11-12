@@ -1,0 +1,33 @@
+# team-exp для behaviour-конвейера devtools (смоук WS-SMOKE-001).
+# Источник формы — steward profiles/team-exp.yaml @ 4a1c7c44 (пин конвейера).
+# Узлы: charter → requirements → behaviour-spec → design → acceptance →
+# decomposition → tasks. acceptance (qa, из спеки Task 1) добавлена как
+# second upstream к decomposition.
+profile: team-exp
+solo_auto_approve: true
+artifacts:
+  - {id: charter, template: charter.md, owner_role: product, upstream: []}
+  - id: requirements
+    template: requirements.md
+    owner_role: product
+    upstream: [charter]
+  - id: behaviour-spec
+    template: behaviour-spec.md
+    owner_role: product
+    upstream: [requirements]
+  - {id: design, template: design.md, owner_role: architects,
+     upstream: [requirements, behaviour-spec]}
+  - id: acceptance
+    template: acceptance.md
+    owner_role: qa
+    upstream: [requirements, behaviour-spec]
+  - id: decomposition
+    template: decomposition.md
+    owner_role: tech-lead
+    # compile: decomposition→maestro/project.yaml НЕ реализуется (наш лейн
+    # Mode-2) — осознанное отступление, §2/§8 спеки.
+    upstream: [design, acceptance]
+  - id: tasks
+    owner_role: stream-owner
+    upstream: [decomposition]
+    delegate: spec-runner
