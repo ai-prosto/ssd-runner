@@ -1,0 +1,114 @@
+{
+  "absence": [],
+  "attempt_id": "cc62d01eb50c41be9caad6e2ff664014",
+  "bases": [
+    {
+      "path": "00-discovery/brief.md",
+      "role": "engineer-brief",
+      "sha256": "fe255f3a8cf608b00d411025d1445882eef860b5cd999354fd10796a3e334b2c",
+      "size": 9226
+    }
+  ],
+  "check_identity": "8ea838626d232623a000b5feb1712181d839291cfd8c02026075f6988a4bd2cd",
+  "context": {
+    "estimate_tokens": 10517,
+    "limit_tokens": 120000,
+    "method": "utf8-bytes/4",
+    "reserve_tokens": 8000,
+    "size": 42070,
+    "unit": "utf8-bytes"
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "reason": "Все ограничения, системы, интерфейсы, архитектурные предпочтения и риски инженерного брифа перенесены в charter (включая явную перенумерацию CON-01/02 и RK-01 брифа) и спорные пункты RK-06/07/08 подняты как Q-01/Q-02/Q-03.",
+      "status": "pass"
+    },
+    {
+      "id": "R2",
+      "reason": "Прямых противоречий инженерному брифу нет; расхождения ограничиваются совещательными замечаниями о формулировках и наименовании.",
+      "status": "pass"
+    }
+  ],
+  "edge": "charter-vs-engineer-brief",
+  "findings": [
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          241,
+          244
+        ],
+        "path": "00-charter.md"
+      },
+      "rule_id": "R2",
+      "statement": "CON-02 утверждает отсутствие ограничений по людям, тогда как бриф CON-06 и RK-11 фиксируют одного разработчика в свободное время и bus-factor 1 (charter несёт их как CON-06/RK-11, поэтому это неоднозначность формулировки, а не противоречие)."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          6,
+          7
+        ],
+        "path": "00-charter.md"
+      },
+      "rule_id": "R2",
+      "statement": "Заголовок и subject называют инструмент «sprc-runner», тогда как бриф (S-01) и тело устава используют «spec-runner», а сам проект в брифе — ssd-runner."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          187,
+          189
+        ],
+        "path": "00-charter.md"
+      },
+      "rule_id": "R2",
+      "statement": "Acceptance NFR-02 отсылает к тому, «как это реализовано в spec-runner», хотя AP-06/AP-07 брифа (CON-14 устава) исключают переиспользование кода spec-runner, что делает критерий зависимым от внешнего репозитория."
+    }
+  ],
+  "finished_at": "2026-11-13T17:09:14.974238+00:00",
+  "node": "charter",
+  "result_key": "68d6a8e6aae6cb1e0570a0b59a822ebc68c3c3d49e01ba5ec9f3c11715434495",
+  "reviewer": {
+    "effort": null,
+    "env_passthrough": [
+      "HOME",
+      "LANG",
+      "PATH",
+      "TMPDIR",
+      "USER"
+    ],
+    "harness": "claude",
+    "harness_version": "2.1.322 (Claude Code)",
+    "model": "claude-opus-5",
+    "model_id": null
+  },
+  "rules": {
+    "id": "charter-vs-engineer-brief",
+    "items": [
+      [
+        "R1",
+        "Уточнения инженерного брифа (ограничения реализации, границы) отражены в charter."
+      ],
+      [
+        "R2",
+        "Charter не противоречит инженерному брифу."
+      ]
+    ]
+  },
+  "schema_version": 1,
+  "started_at": "2026-11-13T17:06:45.670754+00:00",
+  "subject": [
+    {
+      "path": "00-charter.md",
+      "role": "subject",
+      "sha256": "5511d94bee8125c25986977e67796de64fce1c4c2db6ff1fce01b96264560216",
+      "size": 28691
+    }
+  ],
+  "verdict": "PASS",
+  "wave": 1
+}
