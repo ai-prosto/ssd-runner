@@ -1,0 +1,11 @@
+schema: discovery-brief-approval-request/v1
+purpose: discovery-brief-approval
+brief: brief.md
+brief_self_hash: "sha256:b79816308e1fcbf14f809acb07f6f52f922a7122d318d48e292655a4a1b7c415"
+policy:
+  repo: "darkfactory-config"
+  ref: "test"
+  path: "accounts.human"
+  sha: "457c105e77b6cbbec94a5411ee3b0d74725195d6"
+run_id: "sprc-runner-claude-agent-sdk-20261112-102751"
+ws_id: "sprc-runner-claude-agent-sdk-20261112"
