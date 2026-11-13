@@ -1,7 +1,7 @@
 ---
 schema: 1
 spec_stage: charter
-status: approval_pending
+status: approved
 owner_role: product
 title: sprc-runner на Claude Agent SDK
 subject: создать аналог sprc-runner (соседнее репо) на Claude Agent SDK
@@ -13,6 +13,8 @@ upstream_hashes:
   discovery-customer: 60f7233f05e17122611df0b81e26473336e51b5d
 approved_content_hash: a588a7765cea3933fdc7cff6208e1ee90eb14707
 version: 2
+approved_at: '2026-11-13T17:11:23Z'
+approved_by: ai-prosto
 ---
 
 # Charter — sprc-runner на Claude Agent SDK
