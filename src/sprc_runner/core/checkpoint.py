@@ -23,10 +23,15 @@ class RunCheckpoint:
         files: FilePort,
         tasks_path: Path | None = None,
     ) -> None:
+        self._run_dir = run_dir
         self._path = run_dir / st.STATE_NAME
         self._state = state
         self._files = files
         self._tasks_path = tasks_path
+
+    @property
+    def run_dir(self) -> Path:
+        return self._run_dir
 
     @property
     def state(self) -> st.RunState:

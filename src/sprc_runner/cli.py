@@ -50,6 +50,7 @@ from sprc_runner.core.tasks_md import TaskRecord, parse_tasks
 from sprc_runner.ports import (
     AgentPort,
     GitPort,
+    Outcome,
     ReviewerPort,
     SpecCheckerPort,
     TestRunnerPort,
@@ -159,8 +160,20 @@ async def _loop_tasks(
         checkpoint.finished(status.value)
     progress.run_finished(status, done_count(state), len(state.tasks))
     if result.aborted:
-        print("Прогон остановлен: отказ агента на реализации", file=err)
+        last = result.attempts[-1]
+        if last.implement_outcome is Outcome.SUBSCRIPTION_LIMIT:
+            print(limit_message(checkpoint.run_dir), file=err)
+        else:
+            print("Прогон остановлен: отказ агента на реализации", file=err)
     return exit_code_for(status)
+
+
+def limit_message(run_dir: Path) -> str:
+    """Сообщение о паузе по лимитам подписки: причина и как продолжить (BEH-31)."""
+    return (
+        "Прогон приостановлен: исчерпаны лимиты подписки. Состояние сохранено. "
+        f"Возобновление после сброса лимитов: sprc-runner resume {run_dir}"
+    )
 
 
 def _drive(
@@ -236,7 +249,10 @@ def _run(
             )
         except PrepareError as exc:
             checkpoint.paused(f"{exc.stage}_{exc.result.outcome.value}")
-            print(f"Прогон остановлен: {exc}", file=err)
+            if exc.result.outcome is Outcome.SUBSCRIPTION_LIMIT:
+                print(limit_message(run_dir), file=err)
+            else:
+                print(f"Прогон остановлен: {exc}", file=err)
             return EXIT_ABORTED
         finally:
             await runner.close()
