@@ -625,7 +625,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-08], [NFR-10], [NFR-04]
 
 ### TASK-017: Проверка: сквозной прогон эталонного описания
-P2 | TODO   Est: 0.5d
+P2 | ⏸️ BLOCKED   Est: 0.5d
 
 Проверить сценарии BEH-11 (DT-17, группа observation).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-17
