@@ -1,6 +1,5 @@
 """sprc-runner на Claude Agent SDK."""
 
+from sprc_runner.cli import main
 
-def main() -> None:
-    """Точка входа CLI (заглушка до реализации следующих задач)."""
-    print("sprc-runner")
+__all__ = ["main"]
