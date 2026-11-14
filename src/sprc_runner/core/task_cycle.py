@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from sprc_runner.config import RunConfig
-from sprc_runner.core.tasks_md import TaskRecord, validate_tasks
+from sprc_runner.core.tasks_md import TaskRecord, mark_completed, validate_tasks
 from sprc_runner.ports import (
     AgentPort,
     Outcome,
@@ -135,15 +135,77 @@ async def run_attempt(
     return record
 
 
-async def run_task_list(
-    tasks_text: str,
-    attempt: Callable[[TaskRecord, int], Awaitable[AttemptRecord]],
-) -> list[AttemptRecord]:
-    """Пройти задачи списка по порядку, по одной попытке на задачу."""
-    records: list[AttemptRecord] = []
+AttemptFn = Callable[[TaskRecord, int], Awaitable[AttemptRecord]]
+
+
+@dataclass
+class TaskResult:
+    """Итог задачи: все попытки (каждая — своя запись) и признак успеха."""
+
+    task_id: str
+    attempts: list[AttemptRecord] = field(default_factory=list)
+
+    @property
+    def succeeded(self) -> bool:
+        return bool(self.attempts) and self.attempts[-1].success
+
+    @property
+    def failed(self) -> bool:
+        """Провалена: попытки исчерпаны без успеха."""
+        return not self.succeeded
+
+
+async def run_task(
+    task: TaskRecord, attempt: AttemptFn, max_attempts: int
+) -> TaskResult:
+    """Повторять попытки до успеха, но не более `max_attempts` (BEH-22, BEH-23).
+
+    Попытки нумеруются с 1; записи прежних попыток сохраняются в `attempts`.
+    """
+    result = TaskResult(task.id)
+    for number in range(1, max_attempts + 1):
+        record = await attempt(task, number)
+        result.attempts.append(record)
+        if record.success:
+            break
+    return result
+
+
+@dataclass
+class RunResult:
+    """Итог прогона списка: результаты задач и обновлённый текст `tasks.md`."""
+
+    results: list[TaskResult]
+    tasks_text: str
+
+    @property
+    def attempts(self) -> list[AttemptRecord]:
+        return [a for r in self.results for a in r.attempts]
+
+
+async def run_tasks(
+    tasks_text: str, attempt: AttemptFn, max_attempts: int
+) -> RunResult:
+    """Пройти задачи по порядку; отметка о выполнении — только после успеха (BEH-28).
+
+    Провалившаяся задача отметки не получает, цикл переходит к следующей и
+    конечен: число попыток по каждой задаче ограничено `max_attempts`.
+    """
+    results: list[TaskResult] = []
+    text = tasks_text
     for task in select_tasks(tasks_text):
-        records.append(await attempt(task, 1))
-    return records
+        result = await run_task(task, attempt, max_attempts)
+        results.append(result)
+        if result.succeeded:
+            text = mark_completed(text, task.id)
+    return RunResult(results, text)
+
+
+async def run_task_list(
+    tasks_text: str, attempt: AttemptFn, max_attempts: int = 1
+) -> list[AttemptRecord]:
+    """Пройти задачи списка по порядку; вернуть записи всех попыток."""
+    return (await run_tasks(tasks_text, attempt, max_attempts)).attempts
 
 
 def succeeded_ids(records: Iterable[AttemptRecord]) -> list[str]:

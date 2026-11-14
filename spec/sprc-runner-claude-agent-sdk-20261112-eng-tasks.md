@@ -461,7 +461,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-03], [FR-07], [NFR-07]
 
 ### TASK-007: Повторы, лимит попыток и отметка о выполнении
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Реализовать сценарии BEH-22, BEH-23, BEH-28 (DT-07, группа pipeline).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-07
