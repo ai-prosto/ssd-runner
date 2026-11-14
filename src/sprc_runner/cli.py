@@ -10,6 +10,7 @@ from typing import NoReturn, TextIO
 
 import anyio
 
+from sprc_runner.adapters.clock import SystemClock
 from sprc_runner.adapters.fs import LocalFiles
 from sprc_runner.config import (
     EXIT_CONFIG_REFUSED,
@@ -18,6 +19,7 @@ from sprc_runner.config import (
 )
 from sprc_runner.core.checkpoint import RunCheckpoint
 from sprc_runner.core.layout import resolve_target
+from sprc_runner.core.logbook import LOG_NAME, EventType, Journal
 from sprc_runner.core.prepare import (
     INPUT_NAME,
     STAGE_NAMES,
@@ -125,6 +127,7 @@ async def _loop_tasks(
     charter_root: Path,
     progress: Progress,
     err: TextIO,
+    journal: Journal | None = None,
     only: Collection[str] | None = None,
     attempts_done: Mapping[str, int] | None = None,
 ) -> int:
@@ -140,6 +143,7 @@ async def _loop_tasks(
             task=task,
             number=number,
             workdir=target,
+            journal=journal,
             git=loop.git,
             target=target,
             charter_root=charter_root,
@@ -149,6 +153,7 @@ async def _loop_tasks(
         tasks_text,
         attempt,
         config.max_attempts,
+        journal=journal,
         progress=progress,
         checkpoint=checkpoint,
         only=only,
@@ -159,6 +164,11 @@ async def _loop_tasks(
     if not result.aborted:
         checkpoint.finished(status.value)
     progress.run_finished(status, done_count(state), len(state.tasks))
+    if journal:
+        if result.aborted:
+            journal.emit(EventType.RUN_PAUSED, reason=status.value)
+        else:
+            journal.finish(EventType.RUN_FINISHED, outcome=status.value)
     if result.aborted:
         last = result.attempts[-1]
         if last.implement_outcome is Outcome.SUBSCRIPTION_LIMIT:
@@ -224,15 +234,23 @@ def _run(
     )
     checkpoint.save()
     progress = Progress(out)
+    journal = Journal(run_dir / LOG_NAME, run_id, LocalFiles(), SystemClock())
 
     async def go() -> int:
         runner = agent or build_agent(run_dir)
+        journal.start(EventType.RUN_STARTED)
         try:
             artifacts = await run_preparation(
-                runner, config, run_dir, progress=progress, checkpoint=checkpoint
+                runner,
+                config,
+                run_dir,
+                journal=journal,
+                progress=progress,
+                checkpoint=checkpoint,
             )
             if loop is None:
                 checkpoint.finished("prepared")
+                journal.finish(EventType.RUN_FINISHED, outcome="prepared")
                 return EXIT_OK
             tasks_text = artifacts.tasks.read_text(encoding="utf-8")
             checkpoint.tasks_registered([t.id for t in select_tasks(tasks_text)])
@@ -246,9 +264,14 @@ def _run(
                 charter_root=cwd,
                 progress=progress,
                 err=err,
+                journal=journal,
             )
         except PrepareError as exc:
             checkpoint.paused(f"{exc.stage}_{exc.result.outcome.value}")
+            journal.emit(
+                EventType.RUN_PAUSED,
+                reason=f"{exc.stage}_{exc.result.outcome.value}",
+            )
             if exc.result.outcome is Outcome.SUBSCRIPTION_LIMIT:
                 print(limit_message(run_dir), file=err)
             else:
@@ -302,9 +325,11 @@ def _resume(
     if following is not None:
         print(f"Возобновление с задачи {following.task_id}", file=out)
     progress = Progress(out)
+    journal = Journal(run_dir / LOG_NAME, state.run_id, LocalFiles(), SystemClock())
 
     async def go() -> int:
         runner = agent or build_agent(run_dir)
+        journal.start(EventType.RUN_STARTED)
         try:
             return await _loop_tasks(
                 runner=runner,
@@ -316,6 +341,7 @@ def _resume(
                 charter_root=cwd,
                 progress=progress,
                 err=err,
+                journal=journal,
                 only=unfinished_ids(state),
                 attempts_done={t.task_id: t.attempts for t in state.tasks},
             )
