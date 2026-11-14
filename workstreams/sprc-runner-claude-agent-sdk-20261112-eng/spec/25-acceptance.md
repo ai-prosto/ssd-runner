@@ -1,7 +1,7 @@
 ---
 schema: 1
 spec_stage: acceptance
-status: approval_pending
+status: approved
 owner_role: qa
 title: Критерии приёмки — sprc-runner на Claude Agent SDK
 subject: создать аналог sprc-runner (соседнее репо) на Claude Agent SDK
@@ -13,6 +13,8 @@ upstream_hashes:
   behaviour-spec: "3c4032c118da4771156e89808787839f32547682"
 approved_content_hash: f16b2493e865f1c44bfc1b8458d5bf2059ec72f5
 version: 2
+approved_at: '2026-11-14T10:40:05Z'
+approved_by: ai-prosto
 ---
 
 # Критерии приёмки — sprc-runner на Claude Agent SDK
