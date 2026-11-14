@@ -1,0 +1,168 @@
+{
+  "absence": [],
+  "attempt_id": "cd109d9be1704c4bbcca898a8335434f",
+  "bases": [
+    {
+      "path": "00-charter.md",
+      "role": "charter",
+      "sha256": "8a673b15e2b564c6cf890d8aac462b22dd67542d433e2404b400bfa2b3bbdea2",
+      "size": 28828
+    }
+  ],
+  "check_identity": "115524c0d54d00d5c88d8a98ca57ca4c88245e1facafe9774e54db2294ee407a",
+  "context": {
+    "estimate_tokens": 17965,
+    "limit_tokens": 120000,
+    "method": "utf8-bytes/4",
+    "reserve_tokens": 8000,
+    "size": 71860,
+    "unit": "utf8-bytes"
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "reason": "Все G/CON/M устава имеют реализующее требование либо явное отклонение с названной причиной (G-03, CON-02, CON-06, CON-08).",
+      "status": "pass"
+    },
+    {
+      "id": "R2",
+      "reason": "Ни одно Must-требование не противоречит ограничениям устава; напряжение NFR-02/CON-14 снято ссылкой на устав и выносом механики в Q-09.",
+      "status": "pass"
+    },
+    {
+      "id": "R3",
+      "reason": "Все введённые на этом этапе требования трассированы на CON/IF устава, новых целей без ссылки нет.",
+      "status": "pass"
+    },
+    {
+      "id": "R4",
+      "reason": "Must/Should сформулированы через наблюдаемый результат; упоминания внутреннего устройства несут решения CON-10/CON-11 ссылкой на устав.",
+      "status": "pass"
+    }
+  ],
+  "edge": "requirements-vs-charter",
+  "findings": [
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          443,
+          450
+        ],
+        "path": "10-requirements.md"
+      },
+      "rule_id": "R1",
+      "statement": "Обратная проверка покрытия перечисляет не все покрытые ограничения: CON-04, CON-13 и CON-15 адресованы трассами требований (FR-09/NFR-03, FR-04/FR-05, NFR-09), но в список не попали."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          311,
+          311
+        ],
+        "path": "10-requirements.md"
+      },
+      "rule_id": "R2",
+      "statement": "NFR-05 расширяет периметр изоляции до целевого каталога результата относительно формулировки устава «только в каталоге своего прогона», не сославшись на IF-04, который это допускает."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          191,
+          193
+        ],
+        "path": "10-requirements.md"
+      },
+      "rule_id": "R3",
+      "statement": "Каталог по умолчанию `.sdd-runs/` — новое решение этапа требований без основания в уставе; трассы FR-08 указывают лишь CON-17, IF-01, IF-02."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          232,
+          233
+        ],
+        "path": "10-requirements.md"
+      },
+      "rule_id": "R4",
+      "statement": "Критерий приёмки FR-10 «читается инструментарием и глазами так же, как tasks.md из spec-runner» субъективен и снаружи однозначно не проверяется."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          277,
+          278
+        ],
+        "path": "10-requirements.md"
+      },
+      "rule_id": "R4",
+      "statement": "Критерий NFR-02 «значимое сокращение его содержимого» не задаёт порога, поэтому внешняя проверка результата неоднозначна."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          214,
+          215
+        ],
+        "path": "10-requirements.md"
+      },
+      "rule_id": "R4",
+      "statement": "FR-09 фиксирует гранулярность чекпойнта (после каждой задачи и каждой попытки), тогда как блокирующий вопрос Q-07 объявляет эту гранулярность открытой."
+    }
+  ],
+  "finished_at": "2026-11-14T04:16:39.589485+00:00",
+  "node": "requirements",
+  "result_key": "3b601efa2f00563c4d17cf9f5e0c9e7e2560932e105c9ba8341a6e2a5ae1e331",
+  "reviewer": {
+    "effort": null,
+    "env_passthrough": [
+      "HOME",
+      "LANG",
+      "PATH",
+      "TMPDIR",
+      "USER"
+    ],
+    "harness": "claude",
+    "harness_version": "2.1.323 (Claude Code)",
+    "model": "claude-opus-5",
+    "model_id": null
+  },
+  "rules": {
+    "id": "requirements-vs-charter",
+    "items": [
+      [
+        "R1",
+        "Каждая цель, ограничение и метрика charter (G-*, CON-*, M-*) имеет хотя бы одно требование, которое её реализует или явно отклоняет с названной причиной."
+      ],
+      [
+        "R2",
+        "Ни одно Must-требование не противоречит ограничениям charter."
+      ],
+      [
+        "R3",
+        "Требование не вводит цель, которой нет в charter, без ссылки на него."
+      ],
+      [
+        "R4",
+        "Формулировка каждого Must/Should проверяема снаружи: наблюдаемый результат, не внутреннее устройство."
+      ]
+    ]
+  },
+  "schema_version": 1,
+  "started_at": "2026-11-14T04:13:30.824366+00:00",
+  "subject": [
+    {
+      "path": "10-requirements.md",
+      "role": "subject",
+      "sha256": "6c869a7da01b7b81c9a6b42c99a7c3f1d138e8047b2443210979bc489535ecc9",
+      "size": 38432
+    }
+  ],
+  "verdict": "PASS",
+  "wave": 2
+}
