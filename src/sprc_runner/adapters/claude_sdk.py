@@ -5,6 +5,7 @@
 """
 
 import json
+import re
 from collections.abc import AsyncIterator, Callable
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
@@ -34,8 +35,8 @@ LIMIT_MARKERS = (
     "limit reached",
     "quota",
     "overloaded",
-    "429",
 )
+LIMIT_STATUS = re.compile(r"\b429\b")
 """Сигнатуры текста отказа, означающие исчерпание лимитов подписки."""
 
 # Таблица «исключение SDK → доменный исход»; проверяется по порядку,
@@ -51,7 +52,7 @@ FAILURE_TABLE: tuple[tuple[type[BaseException], Outcome], ...] = (
 
 def _is_limit_text(text: str) -> bool:
     lowered = text.lower()
-    return any(marker in lowered for marker in LIMIT_MARKERS)
+    return any(m in lowered for m in LIMIT_MARKERS) or bool(LIMIT_STATUS.search(text))
 
 
 def classify_failure(exc: BaseException) -> Outcome:
@@ -84,7 +85,8 @@ class ClaudeSdkAgent:
 
     def _transcript_path(self, request: StageRequest) -> Path:
         self._counter += 1
-        return self._transcript_dir / f"{request.stage}-{self._counter:04d}.jsonl"
+        stage = re.sub(r"[^A-Za-z0-9_.-]", "_", request.stage)
+        return self._transcript_dir / f"{stage}-{self._counter:04d}.jsonl"
 
     async def invoke(self, request: StageRequest) -> StageResult:
         """Выполнить инвокацию этапа и вернуть доменный результат."""
