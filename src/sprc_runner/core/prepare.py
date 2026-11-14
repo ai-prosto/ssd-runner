@@ -14,6 +14,7 @@ from pathlib import Path
 
 from sprc_runner.config import RunConfig
 from sprc_runner.core.layout import SERVICE_DIR_NAME, gitignore_entry, run_dir_path
+from sprc_runner.core.tasks_md import TasksFormatError, validate_tasks
 from sprc_runner.ports import AgentPort, Outcome, StageRequest, StageResult
 
 INPUT_NAME = "input.md"
@@ -136,4 +137,11 @@ async def run_preparation(
         (TASKS_INSTRUCTION, spec, requirements),
     )
     paths.tasks.write_text(tasks, encoding="utf-8")
+    try:
+        validate_tasks(tasks)
+    except TasksFormatError as exc:
+        raise PrepareError(
+            "prepare_tasks",
+            StageResult(Outcome.OTHER_FAILURE, tasks, None, f"tasks.md: {exc}"),
+        ) from exc
     return paths

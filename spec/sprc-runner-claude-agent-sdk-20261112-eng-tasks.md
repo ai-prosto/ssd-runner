@@ -427,7 +427,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-01], [FR-03], [FR-08], [NFR-05]
 
 ### TASK-005: Контракт `tasks.md` как внешний формат
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Реализовать сценарии BEH-27 (DT-05, группа pipeline).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-05
