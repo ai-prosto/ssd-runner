@@ -1,7 +1,7 @@
 ---
 schema: 1
 spec_stage: behaviour-spec
-status: approval_pending
+status: approved
 owner_role: product
 title: Поведенческая спецификация — sprc-runner на Claude Agent SDK
 subject: создать аналог sprc-runner (соседнее репо) на Claude Agent SDK
@@ -11,6 +11,8 @@ upstream_hashes:
   requirements: "85759d4be961b3d75d4653d0b3a27d96875f5879"
 version: 2
 approved_content_hash: 95ab6bb5538ca6a4da7724d28f21dcf5e20f034c
+approved_at: '2026-11-14T05:23:52Z'
+approved_by: ai-prosto
 ---
 
 # Поведенческая спецификация — sprc-runner на Claude Agent SDK
