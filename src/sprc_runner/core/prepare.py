@@ -15,6 +15,7 @@ from pathlib import Path
 from sprc_runner.config import RunConfig
 from sprc_runner.core.layout import SERVICE_DIR_NAME, gitignore_entry, run_dir_path
 from sprc_runner.core.logbook import EventType, Journal
+from sprc_runner.core.progress import Progress
 from sprc_runner.core.tasks_md import TasksFormatError, validate_tasks
 from sprc_runner.ports import AgentPort, Outcome, StageRequest, StageResult
 
@@ -91,7 +92,10 @@ async def _invoke(
     model: str,
     inputs: tuple[str, ...],
     journal: Journal | None = None,
+    progress: Progress | None = None,
 ) -> str:
+    if progress:
+        progress.stage(stage)
     if journal:
         journal.start(EventType.STAGE_STARTED, stage=stage, model=model)
     result = await agent.invoke(
@@ -121,6 +125,7 @@ async def run_preparation(
     config: RunConfig,
     run_dir: Path,
     journal: Journal | None = None,
+    progress: Progress | None = None,
 ) -> PrepareArtifacts:
     """Выполнить подготовку: спека → требования → список задач."""
     description = (run_dir / INPUT_NAME).read_bytes().decode("utf-8", errors="replace")
@@ -131,6 +136,7 @@ async def run_preparation(
         config.model_prepare,
         (SPEC_INSTRUCTION, description),
         journal,
+        progress,
     )
     paths = PrepareArtifacts(
         run_dir / SPEC_NAME, run_dir / REQUIREMENTS_NAME, run_dir / TASKS_NAME
@@ -143,6 +149,7 @@ async def run_preparation(
         config.model_prepare,
         (REQUIREMENTS_INSTRUCTION, description, spec),
         journal,
+        progress,
     )
     paths.requirements.write_text(requirements, encoding="utf-8")
     tasks = await _invoke(
@@ -152,6 +159,7 @@ async def run_preparation(
         config.model_tasks,
         (TASKS_INSTRUCTION, spec, requirements),
         journal,
+        progress,
     )
     paths.tasks.write_text(tasks, encoding="utf-8")
     try:

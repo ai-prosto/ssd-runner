@@ -14,6 +14,7 @@ from pathlib import Path
 from sprc_runner.config import RunConfig
 from sprc_runner.core.guard import commit_message, evaluate, is_product_path
 from sprc_runner.core.logbook import EventType, Journal
+from sprc_runner.core.progress import Progress
 from sprc_runner.core.tasks_md import TaskRecord, mark_completed, validate_tasks
 from sprc_runner.ports import (
     AgentPort,
@@ -32,6 +33,11 @@ STEP_TESTS = "tests"
 STEPS = (STEP_IMPLEMENT, STEP_REVIEW, STEP_TESTS)
 STEP_GUARD = "guard"
 """Шаг вердикта диффа: есть только в попытках с подключённым git (BEH-34)."""
+
+ABORTING_OUTCOMES = frozenset(
+    {Outcome.SUBSCRIPTION_LIMIT, Outcome.TRANSPORT_ERROR, Outcome.INVALID_CALL_CONFIG}
+)
+"""Исходы инвокации, дающие аварийную остановку прогона (Q-10, BEH-16)."""
 
 IMPLEMENT_TOOLS = ("Read", "Write", "Edit", "Bash")
 REVIEW_TOOLS = ("Read",)
@@ -67,6 +73,11 @@ class AttemptRecord:
     error_code: str | None = None
     guard_violations: list[dict[str, str]] = field(default_factory=list)
     commit: str | None = None
+
+    @property
+    def aborting(self) -> bool:
+        """Отказ инфраструктуры на реализации: повтор и продолжение бессмысленны."""
+        return self.implement_outcome in ABORTING_OUTCOMES
 
     @property
     def decision(self) -> str:
@@ -315,7 +326,10 @@ class TaskResult:
 
 
 async def run_task(
-    task: TaskRecord, attempt: AttemptFn, max_attempts: int
+    task: TaskRecord,
+    attempt: AttemptFn,
+    max_attempts: int,
+    progress: Progress | None = None,
 ) -> TaskResult:
     """Повторять попытки до успеха, но не более `max_attempts` (BEH-22, BEH-23).
 
@@ -323,9 +337,15 @@ async def run_task(
     """
     result = TaskResult(task.id)
     for number in range(1, max_attempts + 1):
+        if progress:
+            progress.attempt_started(task.id, number, max_attempts)
         record = await attempt(task, number)
         result.attempts.append(record)
-        if record.success:
+        if progress:
+            progress.attempt_finished(
+                task.id, number, record.success, record.error_code
+            )
+        if record.success or record.aborting:
             break
     return result
 
@@ -336,10 +356,16 @@ class RunResult:
 
     results: list[TaskResult]
     tasks_text: str
+    aborted: bool = False
+    total: int = 0
 
     @property
     def attempts(self) -> list[AttemptRecord]:
         return [a for r in self.results for a in r.attempts]
+
+    @property
+    def succeeded_count(self) -> int:
+        return sum(1 for r in self.results if r.succeeded)
 
 
 def _task_finished_fields(result: TaskResult) -> dict[str, object]:
@@ -364,6 +390,7 @@ async def run_tasks(
     attempt: AttemptFn,
     max_attempts: int,
     journal: Journal | None = None,
+    progress: Progress | None = None,
 ) -> RunResult:
     """Пройти задачи по порядку; отметка о выполнении — только после успеха (BEH-28).
 
@@ -372,10 +399,14 @@ async def run_tasks(
     """
     results: list[TaskResult] = []
     text = tasks_text
-    for task in select_tasks(tasks_text):
+    tasks = select_tasks(tasks_text)
+    aborted = False
+    for task in tasks:
         if journal:
             journal.start(EventType.TASK_STARTED, task_id=task.id)
-        result = await run_task(task, attempt, max_attempts)
+        if progress:
+            progress.task_started(task.id, task.name)
+        result = await run_task(task, attempt, max_attempts, progress)
         results.append(result)
         if journal and result.attempts:
             journal.finish(
@@ -383,9 +414,14 @@ async def run_tasks(
                 task_id=task.id,
                 **_task_finished_fields(result),
             )
+        if progress:
+            progress.task_finished(task.id, result.succeeded, len(result.attempts))
         if result.succeeded:
             text = mark_completed(text, task.id)
-    return RunResult(results, text)
+        if result.attempts and result.attempts[-1].aborting:
+            aborted = True
+            break
+    return RunResult(results, text, aborted, len(tasks))
 
 
 async def run_task_list(
