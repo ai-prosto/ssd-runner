@@ -12,6 +12,10 @@ import anyio
 
 from sprc_runner.adapters.clock import SystemClock
 from sprc_runner.adapters.fs import LocalFiles
+from sprc_runner.adapters.git import GitRepo
+from sprc_runner.adapters.reviewer import SdkReviewer
+from sprc_runner.adapters.spec_check import TestsCarrySpecChecks
+from sprc_runner.adapters.tests import SubprocessTestRunner
 from sprc_runner.config import (
     EXIT_CONFIG_REFUSED,
     RunConfig,
@@ -51,6 +55,7 @@ from sprc_runner.core.task_cycle import run_attempt, run_tasks, select_tasks
 from sprc_runner.core.tasks_md import TaskRecord, parse_tasks
 from sprc_runner.ports import (
     AgentPort,
+    FilePort,
     GitPort,
     Outcome,
     ReviewerPort,
@@ -93,6 +98,24 @@ class LoopPorts:
     tests: TestRunnerPort
     spec_checker: SpecCheckerPort
     git: GitPort | None = None
+    files: FilePort | None = None
+
+
+LoopFactory = Callable[[AgentPort, RunConfig, Path, Path, Path], LoopPorts]
+"""Сборка портов цикла: агент, конфигурация, каталог прогона, цель, корень устава."""
+
+
+def build_loop(
+    agent: AgentPort, config: RunConfig, run_dir: Path, target: Path, cwd: Path
+) -> LoopPorts:
+    """Реальные порты цикла для консольных команд; подменяется только агент."""
+    return LoopPorts(
+        reviewer=SdkReviewer(agent),
+        tests=SubprocessTestRunner(run_dir / "tests-output"),
+        spec_checker=TestsCarrySpecChecks(),
+        git=GitRepo(target, cwd),
+        files=LocalFiles(),
+    )
 
 
 def build_agent(run_dir: Path) -> AgentPort:
@@ -147,6 +170,8 @@ async def _loop_tasks(
             git=loop.git,
             target=target,
             charter_root=charter_root,
+            files=loop.files,
+            evidence_dir=checkpoint.run_dir / "evidence" if loop.files else None,
         )
 
     result = await run_tasks(
@@ -212,7 +237,7 @@ def _run(
     agent: AgentPort | None,
     out: TextIO,
     err: TextIO,
-    loop: LoopPorts | None = None,
+    loop: LoopPorts | LoopFactory | None = None,
 ) -> int:
     loaded = load_config_or_report((cwd / args.config), err)
     if not isinstance(loaded, RunConfig):
@@ -248,7 +273,8 @@ def _run(
                 progress=progress,
                 checkpoint=checkpoint,
             )
-            if loop is None:
+            ports = _resolve(loop, runner, config, run_dir, target, cwd)
+            if ports is None:
                 checkpoint.finished("prepared")
                 journal.finish(EventType.RUN_FINISHED, outcome="prepared")
                 return EXIT_OK
@@ -256,7 +282,7 @@ def _run(
             checkpoint.tasks_registered([t.id for t in select_tasks(tasks_text)])
             return await _loop_tasks(
                 runner=runner,
-                loop=loop,
+                loop=ports,
                 config=config,
                 checkpoint=checkpoint,
                 tasks_text=tasks_text,
@@ -283,6 +309,19 @@ def _run(
     return _drive(go, checkpoint, run_dir, err)
 
 
+def _resolve(
+    loop: LoopPorts | LoopFactory | None,
+    runner: AgentPort,
+    config: RunConfig,
+    run_dir: Path,
+    target: Path,
+    cwd: Path,
+) -> LoopPorts | None:
+    if callable(loop):
+        return loop(runner, config, run_dir, target, cwd)
+    return loop
+
+
 def _refuse(err: TextIO, message: str) -> int:
     print(f"Возобновление невозможно: {message}", file=err)
     return EXIT_CONFIG_REFUSED
@@ -294,7 +333,7 @@ def _resume(
     agent: AgentPort | None,
     out: TextIO,
     err: TextIO,
-    loop: LoopPorts | None = None,
+    loop: LoopPorts | LoopFactory | None = None,
 ) -> int:
     loaded = load_config_or_report((cwd / args.config), err)
     if not isinstance(loaded, RunConfig):
@@ -331,9 +370,11 @@ def _resume(
         runner = agent or build_agent(run_dir)
         journal.start(EventType.RUN_STARTED)
         try:
+            ports = _resolve(loop, runner, config, run_dir, target, cwd)
+            assert ports is not None
             return await _loop_tasks(
                 runner=runner,
-                loop=loop,
+                loop=ports,
                 config=config,
                 checkpoint=checkpoint,
                 tasks_text=tasks_text,
@@ -358,7 +399,7 @@ def main(
     agent: AgentPort | None = None,
     out: TextIO | None = None,
     err: TextIO | None = None,
-    loop: LoopPorts | None = None,
+    loop: LoopPorts | LoopFactory | None = None,
 ) -> int:
     """Точка входа CLI; возвращает код возврата."""
     out = out or sys.stdout
@@ -370,3 +411,15 @@ def main(
         return _resume(args, cwd or Path.cwd(), agent, out, err, loop)
     print("sprc-runner", file=out)
     return EXIT_OK
+
+
+def console(
+    argv: Sequence[str] | None = None,
+    *,
+    cwd: Path | None = None,
+    agent: AgentPort | None = None,
+    out: TextIO | None = None,
+    err: TextIO | None = None,
+) -> int:
+    """Консольная точка входа: `run` и `resume` собирают реальные порты цикла."""
+    return main(argv, cwd=cwd, agent=agent, out=out, err=err, loop=build_loop)
