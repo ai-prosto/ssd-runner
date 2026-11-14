@@ -608,7 +608,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-06]
 
 ### TASK-016: Проверка границ: ядро офлайн и обмен только через файлы
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Проверить сценарии BEH-14, BEH-35 (DT-16, группа observation).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-16
