@@ -530,7 +530,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [NFR-02], [NFR-05]
 
 ### TASK-011: Прогресс в терминале и коды возврата прогона
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Реализовать сценарии BEH-15, BEH-16 (DT-11, группа cli).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-11
