@@ -512,7 +512,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-01], [FR-06], [NFR-08], [NFR-07]
 
 ### TASK-010: Сторож путей и диффа, фиксация и откат попытки
-P2 | 🔄 IN_PROGRESS   Est: 0.5d
+P2 | 🔍 REVIEW   Est: 0.5d
 
 Реализовать сценарии BEH-32, BEH-33, BEH-34 (DT-10, группа guard).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-10

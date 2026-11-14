@@ -51,7 +51,7 @@ def test_agent_touching_con07_covered_by_target_is_refused(
         if e["event"] == "diff_verdict"
         for v in e["violations"]
     )
-    # откат касается продуктовых путей, но не индексирует и не коммитит запретные
+    assert (repo / rel).read_text(encoding="utf-8") == "original\n"  # откачен
     assert rel not in git(repo, "diff", "--cached", "--name-only").split()
 
 

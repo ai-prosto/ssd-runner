@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 from sprc_runner.core.guard import is_product_path
-from sprc_runner.core.layout import SERVICE_DIR_NAME
+from sprc_runner.core.layout import SERVICE_DIR_NAME, is_forbidden
 from sprc_runner.ports import DiffEntry, DiffSummary
 
 MAX_SECRET_SCAN_BYTES = 1_000_000
@@ -196,7 +196,10 @@ class GitRepo:
         ).stdout
         restore, drop = [], []
         for rel in filter(None, raw.decode().split("\0")):
-            if not self._product(root / rel):
+            path = root / rel
+            # перечень CON-07 откатывается тоже: правка запретного файла не должна
+            # пережить неуспешную попытку и ломать следующие
+            if not (self._product(path) or is_forbidden(path, self._charter_root)):
                 continue
             in_head = self._git(root, "cat-file", "-e", f"HEAD:{rel}", check=False)
             (restore if in_head.returncode == 0 else drop).append(rel)
