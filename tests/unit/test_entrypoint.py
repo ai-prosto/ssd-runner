@@ -4,5 +4,5 @@ from sprc_runner import main
 
 
 def test_main_prints_name(capsys: pytest.CaptureFixture[str]) -> None:
-    main()
+    assert main([]) == 0
     assert capsys.readouterr().out.strip() == "sprc-runner"

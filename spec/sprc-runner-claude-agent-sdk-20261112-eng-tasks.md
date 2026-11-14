@@ -406,7 +406,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [NFR-10]
 
 ### TASK-004: Этапы подготовки, размещение и фиксация входного описания
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Реализовать сценарии BEH-01, BEH-07, BEH-08, BEH-12, BEH-13 (DT-04, группа pipeline).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-04

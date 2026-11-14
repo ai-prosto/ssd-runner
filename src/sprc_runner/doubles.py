@@ -122,3 +122,12 @@ class FakeClock:
 
     def monotonic(self) -> float:
         return self._t
+
+
+class EchoAgent(FakeAgent):
+    """Агент, ответ которого выводится из входов этапа (для проверки цепочки)."""
+
+    async def invoke(self, request: StageRequest) -> StageResult:
+        self.calls.append(request)
+        text = f"[{request.stage}|{request.model}] " + " || ".join(request.inputs[1:])
+        return StageResult(Outcome.DONE, text, None, "end_turn")
