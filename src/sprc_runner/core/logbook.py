@@ -67,8 +67,12 @@ def build_event(
 
 
 def encode_event(event: dict[str, Any]) -> str:
-    """Одна запись — одна строка JSON."""
-    return json.dumps(event, ensure_ascii=False, separators=(",", ":"))
+    """Одна запись — одна строка JSON, только ASCII.
+
+    ASCII гарантирует, что оборванная запись не режет многобайтный символ и
+    читатель не падает на `UnicodeDecodeError` вместо отбрасывания хвоста.
+    """
+    return json.dumps(event, ensure_ascii=True, separators=(",", ":"))
 
 
 class Journal:

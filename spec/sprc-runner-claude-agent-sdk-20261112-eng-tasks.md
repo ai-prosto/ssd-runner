@@ -477,7 +477,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-07], [NFR-06], [FR-06], [FR-10]
 
 ### TASK-008: Журнал прогона — события, время, версия схемы
-P2 | 🔄 IN_PROGRESS   Est: 0.5d
+P2 | 🔍 REVIEW   Est: 0.5d
 
 Реализовать сценарии BEH-05, BEH-06, BEH-26 (DT-08, группа journal).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-08
