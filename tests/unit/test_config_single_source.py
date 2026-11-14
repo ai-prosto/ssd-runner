@@ -15,6 +15,8 @@ run_dir = ".sprc"
 log_dir = "lg"
 log_level = "DEBUG"
 test_command = "make test"
+format_skill_path = "fmt/skill"
+format_skill_version = "7"
 """
 
 
