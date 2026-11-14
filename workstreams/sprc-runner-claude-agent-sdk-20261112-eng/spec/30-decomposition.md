@@ -2,7 +2,7 @@
 schema: 1
 spec_stage: decomposition
 dt_contract_version: 2
-status: approval_pending
+status: approved
 owner_role: tech-lead
 title: Декомпозиция — sprc-runner на Claude Agent SDK
 subject: создать аналог sprc-runner (соседнее репо) на Claude Agent SDK
@@ -14,6 +14,8 @@ upstream_hashes:
   acceptance: "657dd69fdfccdb8867c7f8f95356447306b7d74b"
 approved_content_hash: c7fa36e926e0fb53cbead1391dbeddbe7171b185
 version: 2
+approved_at: '2026-11-14T13:28:12Z'
+approved_by: ai-prosto
 ---
 
 # Декомпозиция — sprc-runner на Claude Agent SDK
