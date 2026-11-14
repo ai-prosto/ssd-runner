@@ -130,4 +130,9 @@ class EchoAgent(FakeAgent):
     async def invoke(self, request: StageRequest) -> StageResult:
         self.calls.append(request)
         text = f"[{request.stage}|{request.model}] " + " || ".join(request.inputs[1:])
+        if request.stage == "prepare_tasks":
+            text = (
+                "### TASK-001: Эхо-задача\nP2 | ⬜ TODO   Est: 0.5d\n\n"
+                f"{text}\n\n**Checklist:**\n- [ ] выполнить\n"
+            )
         return StageResult(Outcome.DONE, text, None, "end_turn")

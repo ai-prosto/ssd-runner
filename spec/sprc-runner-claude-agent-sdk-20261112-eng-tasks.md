@@ -427,7 +427,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-01], [FR-03], [FR-08], [NFR-05]
 
 ### TASK-005: Контракт `tasks.md` как внешний формат
-P2 | TODO   Est: 0.5d
+P2 | ✅ DONE   Est: 0.5d
 
 Реализовать сценарии BEH-27 (DT-05, группа pipeline).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-05
@@ -435,9 +435,9 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Depends on:** [TASK-004]
 
 **Checklist:**
-- [ ] реализовать BEH-27: Файл задач совпадает по формату с файлом из spec-runner (DEL-14 (module): `core/tasks_md.py` читает и пишет `tasks.md` в формате spec-runner без собственных полей и без изменённой разметки записей, и порождённый прогоном файл разбирается тем же инструментарием, что файл соседнего репозитория)
-- [ ] DEL-15 (capability): Список задач, порождённый этапом подготовки, читается как перечень задач с идентификаторами и содержит не меньше одной задачи, пригодной входом цикла реализации
-- [ ] проверка группы: tests/contract/test_tasks_md_contract.py (kind: contract) зелёные на BEH-27
+- [x] реализовать BEH-27: Файл задач совпадает по формату с файлом из spec-runner (DEL-14 (module): `core/tasks_md.py` читает и пишет `tasks.md` в формате spec-runner без собственных полей и без изменённой разметки записей, и порождённый прогоном файл разбирается тем же инструментарием, что файл соседнего репозитория)
+- [x] DEL-15 (capability): Список задач, порождённый этапом подготовки, читается как перечень задач с идентификаторами и содержит не меньше одной задачи, пригодной входом цикла реализации
+- [x] проверка группы: tests/contract/test_tasks_md_contract.py (kind: contract) зелёные на BEH-27
 
 **Traces to:** [FR-10]
 
