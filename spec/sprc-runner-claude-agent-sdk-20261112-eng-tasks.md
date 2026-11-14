@@ -592,7 +592,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-11]
 
 ### TASK-015: Проверка: каталог прогона читается без запуска инструмента
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Проверить сценарии BEH-25 (DT-15, группа observation).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-15
