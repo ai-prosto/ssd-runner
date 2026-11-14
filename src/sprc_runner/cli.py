@@ -12,7 +12,7 @@ import anyio
 
 from sprc_runner.adapters.clock import SystemClock
 from sprc_runner.adapters.fs import LocalFiles
-from sprc_runner.adapters.git import GitRepo
+from sprc_runner.adapters.git import GitRepo, ensure_repo
 from sprc_runner.adapters.reviewer import SdkReviewer
 from sprc_runner.adapters.spec_check import TestsCarrySpecChecks
 from sprc_runner.adapters.tests import SubprocessTestRunner
@@ -279,6 +279,8 @@ def _run(
                 checkpoint.finished("prepared")
                 journal.finish(EventType.RUN_FINISHED, outcome="prepared")
                 return EXIT_OK
+            if ports.git is not None:
+                ensure_repo(target)
             tasks_text = artifacts.tasks.read_text(encoding="utf-8")
             checkpoint.tasks_registered([t.id for t in select_tasks(tasks_text)])
             return await _loop_tasks(
@@ -373,6 +375,8 @@ def _resume(
         try:
             ports = _resolve(loop, runner, config, run_dir, target, cwd)
             assert ports is not None
+            if ports.git is not None:
+                ensure_repo(target)
             return await _loop_tasks(
                 runner=runner,
                 loop=ports,
