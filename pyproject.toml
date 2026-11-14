@@ -33,6 +33,7 @@ select = ["E", "F", "I", "UP", "B", "ASYNC"]
 [tool.pyrefly]
 project-includes = ["src", "tests"]
 python-version = "3.12"
+search-path = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

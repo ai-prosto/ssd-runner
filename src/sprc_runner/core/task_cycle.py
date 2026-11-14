@@ -12,10 +12,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from sprc_runner.config import RunConfig
+from sprc_runner.core.guard import commit_message, evaluate, is_product_path
 from sprc_runner.core.logbook import EventType, Journal
 from sprc_runner.core.tasks_md import TaskRecord, mark_completed, validate_tasks
 from sprc_runner.ports import (
     AgentPort,
+    FilePort,
+    GitPort,
     Outcome,
     ReviewerPort,
     SpecCheckerPort,
@@ -27,6 +30,8 @@ STEP_IMPLEMENT = "implement"
 STEP_REVIEW = "review"
 STEP_TESTS = "tests"
 STEPS = (STEP_IMPLEMENT, STEP_REVIEW, STEP_TESTS)
+STEP_GUARD = "guard"
+"""Шаг вердикта диффа: есть только в попытках с подключённым git (BEH-34)."""
 
 IMPLEMENT_TOOLS = ("Read", "Write", "Edit", "Bash")
 REVIEW_TOOLS = ("Read",)
@@ -60,6 +65,8 @@ class AttemptRecord:
     model_review: str = ""
     reviewer_id: str = ""
     error_code: str | None = None
+    guard_violations: list[dict[str, str]] = field(default_factory=list)
+    commit: str | None = None
 
     @property
     def decision(self) -> str:
@@ -96,7 +103,9 @@ def error_code(record: AttemptRecord) -> str | None:
         return "review_rejected"
     if record.tests_returncode != 0:
         return "tests_failed"
-    return "spec_checks_failed"
+    if not record.spec_checks_passed:
+        return "spec_checks_failed"
+    return "diff_guard_rejected"
 
 
 def select_tasks(tasks_text: str) -> list[TaskRecord]:
@@ -133,6 +142,11 @@ async def run_attempt(
     number: int,
     workdir: Path,
     journal: Journal | None = None,
+    git: GitPort | None = None,
+    target: Path | None = None,
+    charter_root: Path | None = None,
+    files: FilePort | None = None,
+    evidence_dir: Path | None = None,
 ) -> AttemptRecord:
     """Выполнить одну попытку: реализация → ревью → тесты → критерий успеха.
 
@@ -198,6 +212,18 @@ async def run_attempt(
     record.success = result.outcome is Outcome.DONE and task_succeeded(
         record.review_passed, record.tests_returncode, record.spec_checks_passed
     )
+    if git is not None:
+        _guard_and_commit(
+            record,
+            task,
+            workdir,
+            git,
+            target or workdir,
+            charter_root or workdir,
+            journal,
+            files,
+            evidence_dir,
+        )
     record.error_code = error_code(record)
     if journal:
         journal.finish(
@@ -210,9 +236,62 @@ async def run_attempt(
             tests_returncode=run.returncode,
             tests_command=run.command,
             model_review=config.model_review,
+            commit=record.commit,
             **ident,
         )
     return record
+
+
+def _guard_and_commit(
+    record: AttemptRecord,
+    task: TaskRecord,
+    workdir: Path,
+    git: GitPort,
+    target: Path,
+    charter_root: Path,
+    journal: Journal | None,
+    files: FilePort | None,
+    evidence_dir: Path | None,
+) -> None:
+    """Вердикт диффа до коммита: нарушение — без коммита, неуспех, откат."""
+    summary = git.diff_summary(workdir)
+    verdict = evaluate(summary, target, charter_root)
+    record.guard_violations = [v.as_dict() for v in verdict.violations]
+    record.add(STEP_GUARD, "allowed" if verdict.allowed else verdict.reason)
+    if journal:
+        journal.emit(
+            EventType.DIFF_VERDICT,
+            task_id=record.task_id,
+            attempt=record.number,
+            allowed=verdict.allowed,
+            violations=record.guard_violations,
+            reason=verdict.reason,
+        )
+    if not verdict.allowed:
+        record.success = False
+    if record.success:
+        paths = [
+            e.path
+            for e in summary.entries
+            if is_product_path(e.path, target, charter_root)
+        ]
+        git.stage_paths(workdir, paths)
+        record.commit = git.commit(
+            workdir,
+            commit_message(
+                task.id,
+                record.number,
+                task.name,
+                run_id=journal.run_id if journal else "",
+                tests_returncode=record.tests_returncode,
+                review_approved=record.review_passed,
+            ),
+        )
+        return
+    if files is not None and evidence_dir is not None:
+        name = f"{task.id}-attempt-{record.number}.diff"
+        files.write_atomic(evidence_dir / name, git.diff(workdir))
+    git.rollback(workdir)
 
 
 AttemptFn = Callable[[TaskRecord, int], Awaitable[AttemptRecord]]
