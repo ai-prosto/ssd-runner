@@ -17,19 +17,6 @@ log_level = "DEBUG"
 test_command = "make test"
 """
 
-VALID = """
-model_prepare = "m1"
-model_tasks = "m2"
-model_implement = "m3"
-model_review = "m4"
-max_attempts = 5
-target_dir = "out"
-run_dir = ".sprc"
-log_dir = "lg"
-log_level = "DEBUG"
-test_command = "make test"
-"""
-
 
 def test_all_settings_come_from_file(tmp_path: Path) -> None:
     p = tmp_path / "c.toml"
