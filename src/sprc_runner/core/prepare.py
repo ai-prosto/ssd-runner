@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sprc_runner.config import RunConfig
+from sprc_runner.core.checkpoint import RunCheckpoint
 from sprc_runner.core.layout import SERVICE_DIR_NAME, gitignore_entry, run_dir_path
 from sprc_runner.core.logbook import EventType, Journal
 from sprc_runner.core.progress import Progress
@@ -23,6 +24,9 @@ INPUT_NAME = "input.md"
 SPEC_NAME = "spec.md"
 REQUIREMENTS_NAME = "requirements.md"
 TASKS_NAME = "tasks.md"
+
+STAGE_NAMES = ("prepare_spec", "prepare_requirements", "prepare_tasks")
+"""Этапы подготовки в порядке выполнения; их статусы ведёт состояние прогона."""
 
 PREPARE_TIMEOUT_SECONDS = 1800.0
 PREPARE_TOOLS = ("Read",)
@@ -93,6 +97,7 @@ async def _invoke(
     inputs: tuple[str, ...],
     journal: Journal | None = None,
     progress: Progress | None = None,
+    checkpoint: RunCheckpoint | None = None,
 ) -> str:
     if progress:
         progress.stage(stage)
@@ -115,6 +120,8 @@ async def _invoke(
             model=model,
             outcome=result.outcome.value,
         )
+    if checkpoint:
+        checkpoint.stage_finished(stage, model, result.outcome is Outcome.DONE)
     if result.outcome is not Outcome.DONE:
         raise PrepareError(stage, result)
     return result.text
@@ -126,6 +133,7 @@ async def run_preparation(
     run_dir: Path,
     journal: Journal | None = None,
     progress: Progress | None = None,
+    checkpoint: RunCheckpoint | None = None,
 ) -> PrepareArtifacts:
     """Выполнить подготовку: спека → требования → список задач."""
     description = (run_dir / INPUT_NAME).read_bytes().decode("utf-8", errors="replace")
@@ -137,6 +145,7 @@ async def run_preparation(
         (SPEC_INSTRUCTION, description),
         journal,
         progress,
+        checkpoint,
     )
     paths = PrepareArtifacts(
         run_dir / SPEC_NAME, run_dir / REQUIREMENTS_NAME, run_dir / TASKS_NAME
@@ -150,6 +159,7 @@ async def run_preparation(
         (REQUIREMENTS_INSTRUCTION, description, spec),
         journal,
         progress,
+        checkpoint,
     )
     paths.requirements.write_text(requirements, encoding="utf-8")
     tasks = await _invoke(
@@ -160,11 +170,14 @@ async def run_preparation(
         (TASKS_INSTRUCTION, spec, requirements),
         journal,
         progress,
+        checkpoint,
     )
     paths.tasks.write_text(tasks, encoding="utf-8")
     try:
         validate_tasks(tasks)
     except TasksFormatError as exc:
+        if checkpoint:
+            checkpoint.stage_finished("prepare_tasks", config.model_tasks, False)
         raise PrepareError(
             "prepare_tasks",
             StageResult(Outcome.OTHER_FAILURE, tasks, None, f"tasks.md: {exc}"),

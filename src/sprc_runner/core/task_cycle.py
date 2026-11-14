@@ -7,15 +7,21 @@
 участвует (BEH-20). Цикл по задачам идёт по списку `tasks.md` (BEH-10).
 """
 
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from sprc_runner.config import RunConfig
+from sprc_runner.core.checkpoint import RunCheckpoint
 from sprc_runner.core.guard import commit_message, evaluate, is_product_path
 from sprc_runner.core.logbook import EventType, Journal
 from sprc_runner.core.progress import Progress
-from sprc_runner.core.tasks_md import TaskRecord, mark_completed, validate_tasks
+from sprc_runner.core.tasks_md import (
+    TaskRecord,
+    mark_completed,
+    parse_tasks,
+    validate_tasks,
+)
 from sprc_runner.ports import (
     AgentPort,
     FilePort,
@@ -330,17 +336,31 @@ async def run_task(
     attempt: AttemptFn,
     max_attempts: int,
     progress: Progress | None = None,
+    first_attempt: int = 1,
+    checkpoint: RunCheckpoint | None = None,
 ) -> TaskResult:
     """Повторять попытки до успеха, но не более `max_attempts` (BEH-22, BEH-23).
 
     Попытки нумеруются с 1; записи прежних попыток сохраняются в `attempts`.
+    При возобновлении нумерация продолжается с `first_attempt`.
     """
     result = TaskResult(task.id)
-    for number in range(1, max_attempts + 1):
+    for number in range(first_attempt, max_attempts + 1):
         if progress:
             progress.attempt_started(task.id, number, max_attempts)
+        if checkpoint:
+            checkpoint.attempt_started(task.id, number)
         record = await attempt(task, number)
         result.attempts.append(record)
+        if checkpoint:
+            checkpoint.attempt_finished(
+                task.id,
+                number,
+                record.success,
+                record.error_code,
+                record.commit,
+                counted=not record.aborting,
+            )
         if progress:
             progress.attempt_finished(
                 task.id, number, record.success, record.error_code
@@ -391,22 +411,40 @@ async def run_tasks(
     max_attempts: int,
     journal: Journal | None = None,
     progress: Progress | None = None,
+    checkpoint: RunCheckpoint | None = None,
+    only: Collection[str] | None = None,
+    attempts_done: Mapping[str, int] | None = None,
 ) -> RunResult:
     """Пройти задачи по порядку; отметка о выполнении — только после успеха (BEH-28).
 
     Провалившаяся задача отметки не получает, цикл переходит к следующей и
     конечен: число попыток по каждой задаче ограничено `max_attempts`.
+
+    Возобновление: `only` ограничивает цикл незавершёнными задачами, а
+    `attempts_done` — сколько попыток по задаче уже сделано до обрыва.
     """
     results: list[TaskResult] = []
     text = tasks_text
-    tasks = select_tasks(tasks_text)
+    if only is None:
+        tasks = select_tasks(tasks_text)
+    else:  # возобновление: список уже проверен при подготовке, пустой остаток не ошибка
+        tasks = [t for t in parse_tasks(tasks_text) if t.id in only and t.is_runnable]
     aborted = False
     for task in tasks:
         if journal:
             journal.start(EventType.TASK_STARTED, task_id=task.id)
         if progress:
             progress.task_started(task.id, task.name)
-        result = await run_task(task, attempt, max_attempts, progress)
+        if checkpoint:
+            checkpoint.task_taken(task.id)
+        result = await run_task(
+            task,
+            attempt,
+            max_attempts,
+            progress,
+            first_attempt=(attempts_done or {}).get(task.id, 0) + 1,
+            checkpoint=checkpoint,
+        )
         results.append(result)
         if journal and result.attempts:
             journal.finish(
@@ -420,7 +458,11 @@ async def run_tasks(
             text = mark_completed(text, task.id)
         if result.attempts and result.attempts[-1].aborting:
             aborted = True
+            if checkpoint:
+                checkpoint.paused(result.attempts[-1].error_code or "aborted")
             break
+        if checkpoint:
+            checkpoint.task_finished(task.id, result.succeeded, text)
     return RunResult(results, text, aborted, len(tasks))
 
 
