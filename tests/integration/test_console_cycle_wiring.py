@@ -58,8 +58,9 @@ def run_console(argv: list[str], repo: Path, agent: ProtocolAgent):
     return code, out.getvalue(), err.getvalue()
 
 
-def test_run_executes_cycle_without_programmatic_ports(repo_config) -> None:
+def test_run_executes_cycle_without_programmatic_ports(repo_config, set_models) -> None:
     repo, cfg = repo_config
+    set_models(model_review="reviewer-model")
     agent = ProtocolAgent()
     code, out, _ = run_console(["run", "Описание.", "--config", str(cfg)], repo, agent)
     assert code == 0
@@ -67,7 +68,7 @@ def test_run_executes_cycle_without_programmatic_ports(repo_config) -> None:
     assert stages.count("implement") == 2
     assert stages.count("review") == 2
     review = next(c for c in agent.calls if c.stage == "review")
-    assert review.model == "sonnet"
+    assert review.model == "reviewer-model"
     log = git(repo, "log", "--format=%s")
     assert "TASK-001" in log and "TASK-002" in log
     assert "prepared" not in out

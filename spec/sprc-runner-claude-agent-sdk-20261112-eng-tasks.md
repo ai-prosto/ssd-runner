@@ -671,7 +671,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [NFR-12], [FR-05]
 
 ### TASK-020: Продакшен-сборка цикла: ревьюер через SDK и реальные порты CLI
-P2 | 🔄 IN_PROGRESS   Est: 0.5d
+P2 | 🔍 REVIEW   Est: 0.5d
 
 Реализовать сценарии BEH-43 (DT-20, группа wiring).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-20
