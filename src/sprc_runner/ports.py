@@ -108,6 +108,20 @@ class TestRunnerPort(Protocol):
     def run(self, workdir: Path, command: str) -> TestRunResult: ...
 
 
+@dataclass(frozen=True)
+class SpecCheckResult:
+    """Итог проверок спецификации и требований, относящихся к задаче (BEH-42)."""
+
+    passed: bool
+    details: str = ""
+
+
+class SpecCheckerPort(Protocol):
+    """Проверки из спецификации и требований задачи: часть единого критерия успеха."""
+
+    def check(self, workdir: Path, task_id: str) -> SpecCheckResult: ...
+
+
 class ClockPort(Protocol):
     """Часы: источник времени для журнала и ограничений."""
 

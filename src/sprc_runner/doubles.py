@@ -7,6 +7,7 @@ from pathlib import Path
 from sprc_runner.ports import (
     Outcome,
     ReviewVerdict,
+    SpecCheckResult,
     StageRequest,
     StageResult,
     TestRunResult,
@@ -106,6 +107,18 @@ class FakeTestRunner:
         self.calls.append(command)
         code = self._queue.popleft() if self._queue else 0
         return TestRunResult(command, code, f"fake://tests/{len(self.calls)}")
+
+
+class FakeSpecChecker:
+    """Проверки спецификации с заданными исходами."""
+
+    def __init__(self, results: Iterable[bool] = ()) -> None:
+        self._queue = deque(results)
+        self.calls: list[str] = []
+
+    def check(self, workdir: Path, task_id: str) -> SpecCheckResult:
+        self.calls.append(task_id)
+        return SpecCheckResult(self._queue.popleft() if self._queue else True)
 
 
 class FakeClock:
