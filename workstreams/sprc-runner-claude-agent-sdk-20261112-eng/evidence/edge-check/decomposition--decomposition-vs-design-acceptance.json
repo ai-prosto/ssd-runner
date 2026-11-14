@@ -1,0 +1,174 @@
+{
+  "absence": [],
+  "attempt_id": "582babd20f3d46bbb0ba8eee9950cccf",
+  "bases": [
+    {
+      "path": "20-design.md",
+      "role": "design",
+      "sha256": "ebfb51e401b9a68c3d63246b46916adffceee2338d90438174152e655fb54966",
+      "size": 58499
+    },
+    {
+      "path": "25-acceptance.md",
+      "role": "acceptance",
+      "sha256": "753dc72db7c6149b0d2a039833c6a9a73a1458f16ac78a5dab9b0d98f459e9dd",
+      "size": 37829
+    }
+  ],
+  "check_identity": "c139e5da324956c0b164f16ede2b8d0448bf6b6444849eeaeff2a2e9bc695c9b",
+  "context": {
+    "estimate_tokens": 41091,
+    "limit_tokens": 120000,
+    "method": "utf8-bytes/4",
+    "reserve_tokens": 8000,
+    "size": 164366,
+    "unit": "utf8-bytes"
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "reason": "каждый DT несёт в sources ссылку на критерий приёмки, а задачи ядра и адаптеров — также на резолюции дизайна Q-07 … Q-13",
+      "status": "pass"
+    },
+    {
+      "id": "R2",
+      "reason": "все AC-01 … AC-27 закрыты хотя бы одним delivers, сценарный периметр BEH-01 … BEH-42 покрыт без пропусков и дублей",
+      "status": "pass"
+    },
+    {
+      "id": "R3",
+      "reason": "обязательства DEL-01 … DEL-55 сводятся к §3.1–§3.6, §4 и резолюциям дизайна либо к критериям приёмки, противоречий решениям оснований нет",
+      "status": "pass"
+    },
+    {
+      "id": "R4",
+      "reason": "граф ацикличен и объявлен топологически, delivered_by и verifies лежат в транзитивном замыкании depends_on, порядку дизайна не противоречит",
+      "status": "pass"
+    }
+  ],
+  "edge": "decomposition-vs-design-acceptance",
+  "findings": [
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          48,
+          53
+        ],
+        "path": "30-decomposition.md"
+      },
+      "rule_id": "R1",
+      "statement": "В sources наряду с acceptance#AC-24 стоят requirements#NFR-09 и behaviour-spec#BEH-37, то есть ссылки на узлы вне объявленного traces_to (design, acceptance), и проверить их на этом узле нечем; обоснование правила держится на присутствующей ссылке на приёмку."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          44,
+          53
+        ],
+        "path": "30-decomposition.md"
+      },
+      "rule_id": "R2",
+      "statement": "Наблюдаемый признак AC-24 «публичные функции и методы аннотированы типами» не отражён ни в DEL-01, ни в DEL-02: доставляется только зелёный прогон ruff/pyrefly/pytest, из которого наличие аннотаций публичного API прямо не следует."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          565,
+          569
+        ],
+        "path": "30-decomposition.md"
+      },
+      "rule_id": "R3",
+      "statement": "DEL-55 обязывает создать документ по конкретному пути tests/manual/tui-contract-readiness.md, тогда как AC-27 (verification: manual) артефакта не называет и дизайн его не вводит — в отличие от change-review-checklist.md (§3.6 дизайна) и reliability-run-series.md (AC-26), путь не обоснован переданными основаниями."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          680,
+          685
+        ],
+        "path": "30-decomposition.md"
+      },
+      "rule_id": "R3",
+      "statement": "Прозаическая вставка «Оператору: …» даёт указание по порядку запуска групп; по собственному правилу узла проза обязательств не несёт, поэтому замечание совещательное — как часть данных документа она инструкцией проверяющему не является и смысла правил не меняет."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          141,
+          144
+        ],
+        "path": "30-decomposition.md"
+      },
+      "rule_id": "R4",
+      "statement": "DEL-13 (`.gitignore` репозитория `<target>` содержит `.sprc/`) объявлен в DT-04, который не зависит от DT-10, хотя карта модулей дизайна (§5) относит «`.gitignore` прогона» к adapters/git.py из DT-10; противоречия нет, так как §3.2 поручает создание файла раннеру при инициализации прогона, но владение стоит зафиксировать явно."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          227,
+          231
+        ],
+        "path": "30-decomposition.md"
+      },
+      "rule_id": "R4",
+      "statement": "DEL-22 требует отдельной сохранённой записи на каждую попытку (и DEL-16 — восстановления порядка шагов по записям попытки) в DT-06/DT-07, тогда как владелец журнального контракта DT-08 (core/logbook.py, Q-08 дизайна с единственным писателем) объявлен зависящим от DT-07, то есть позже обязательств над его артефактом."
+    }
+  ],
+  "finished_at": "2026-11-14T13:26:07.675619+00:00",
+  "node": "decomposition",
+  "result_key": "019a321916f0506cd027ba157cea5e565da863b1ff0703ed09de10ffafc7bc1c",
+  "reviewer": {
+    "effort": null,
+    "env_passthrough": [
+      "HOME",
+      "LANG",
+      "PATH",
+      "TMPDIR",
+      "USER"
+    ],
+    "harness": "claude",
+    "harness_version": "2.1.323 (Claude Code)",
+    "model": "claude-opus-5",
+    "model_id": null
+  },
+  "rules": {
+    "id": "decomposition-vs-design-acceptance",
+    "items": [
+      [
+        "R1",
+        "Каждый DT ссылается на решение дизайна или критерий приёмки, который он реализует."
+      ],
+      [
+        "R2",
+        "Каждый критерий приёмки закрыт хотя бы одним DT (сценарии или delivers)."
+      ],
+      [
+        "R3",
+        "DT не вводит обязательств, отсутствующих в дизайне и приёмке."
+      ],
+      [
+        "R4",
+        "Зависимости DT совместимы с порядком, который задаёт дизайн."
+      ]
+    ]
+  },
+  "schema_version": 1,
+  "started_at": "2026-11-14T13:20:35.475792+00:00",
+  "subject": [
+    {
+      "path": "30-decomposition.md",
+      "role": "subject",
+      "sha256": "3e47bf9cc689310f17c350694528aab288cd8e679a60ed87900a6c03b29152f5",
+      "size": 63452
+    }
+  ],
+  "verdict": "PASS",
+  "wave": 5
+}
