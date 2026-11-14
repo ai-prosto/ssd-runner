@@ -1,7 +1,7 @@
 ---
 schema: 1
 spec_stage: design
-status: approval_pending
+status: approved
 owner_role: architects
 title: Дизайн — sprc-runner на Claude Agent SDK
 subject: создать аналог sprc-runner (соседнее репо) на Claude Agent SDK
@@ -13,6 +13,8 @@ upstream_hashes:
   behaviour-spec: "3c4032c118da4771156e89808787839f32547682"
 approved_content_hash: feae1592bcc7132328d9f4f635693ea6d96e79ff
 version: 2
+approved_at: '2026-11-14T10:40:05Z'
+approved_by: ai-prosto
 ---
 
 # Дизайн — sprc-runner на Claude Agent SDK
