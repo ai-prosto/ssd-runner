@@ -14,6 +14,7 @@ from pathlib import Path
 
 from sprc_runner.config import RunConfig
 from sprc_runner.core.layout import SERVICE_DIR_NAME, gitignore_entry, run_dir_path
+from sprc_runner.core.logbook import EventType, Journal
 from sprc_runner.core.tasks_md import TasksFormatError, validate_tasks
 from sprc_runner.ports import AgentPort, Outcome, StageRequest, StageResult
 
@@ -89,7 +90,10 @@ async def _invoke(
     stage: str,
     model: str,
     inputs: tuple[str, ...],
+    journal: Journal | None = None,
 ) -> str:
+    if journal:
+        journal.start(EventType.STAGE_STARTED, stage=stage, model=model)
     result = await agent.invoke(
         StageRequest(
             stage=stage,
@@ -100,13 +104,23 @@ async def _invoke(
             timeout_seconds=PREPARE_TIMEOUT_SECONDS,
         )
     )
+    if journal:
+        journal.finish(
+            EventType.STAGE_FINISHED,
+            stage=stage,
+            model=model,
+            outcome=result.outcome.value,
+        )
     if result.outcome is not Outcome.DONE:
         raise PrepareError(stage, result)
     return result.text
 
 
 async def run_preparation(
-    agent: AgentPort, config: RunConfig, run_dir: Path
+    agent: AgentPort,
+    config: RunConfig,
+    run_dir: Path,
+    journal: Journal | None = None,
 ) -> PrepareArtifacts:
     """Выполнить подготовку: спека → требования → список задач."""
     description = (run_dir / INPUT_NAME).read_bytes().decode("utf-8", errors="replace")
@@ -116,6 +130,7 @@ async def run_preparation(
         "prepare_spec",
         config.model_prepare,
         (SPEC_INSTRUCTION, description),
+        journal,
     )
     paths = PrepareArtifacts(
         run_dir / SPEC_NAME, run_dir / REQUIREMENTS_NAME, run_dir / TASKS_NAME
@@ -127,6 +142,7 @@ async def run_preparation(
         "prepare_requirements",
         config.model_prepare,
         (REQUIREMENTS_INSTRUCTION, description, spec),
+        journal,
     )
     paths.requirements.write_text(requirements, encoding="utf-8")
     tasks = await _invoke(
@@ -135,6 +151,7 @@ async def run_preparation(
         "prepare_tasks",
         config.model_tasks,
         (TASKS_INSTRUCTION, spec, requirements),
+        journal,
     )
     paths.tasks.write_text(tasks, encoding="utf-8")
     try:
