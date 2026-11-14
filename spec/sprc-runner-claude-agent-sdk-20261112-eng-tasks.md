@@ -442,7 +442,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-10]
 
 ### TASK-006: Цикл задачи — порядок шагов и критерий успеха
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Реализовать сценарии BEH-10, BEH-18, BEH-19, BEH-20, BEH-42 (DT-06, группа pipeline).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-06
