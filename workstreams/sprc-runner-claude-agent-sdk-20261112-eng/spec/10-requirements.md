@@ -1,7 +1,7 @@
 ---
 schema: 1
 spec_stage: requirements
-status: approval_pending
+status: approved
 owner_role: product
 title: Требования — sprc-runner на Claude Agent SDK
 subject: создать аналог sprc-runner (соседнее репо) на Claude Agent SDK
@@ -11,6 +11,8 @@ upstream_hashes:
   charter: "702c9ca90ef4548e5f381dab4d72091bca495dbe"
 approved_content_hash: deb70aa7658d77ec1853a0174272c0df7a60b2a3
 version: 2
+approved_at: '2026-11-14T04:18:44Z'
+approved_by: ai-prosto
 ---
 
 # Требования — sprc-runner на Claude Agent SDK
