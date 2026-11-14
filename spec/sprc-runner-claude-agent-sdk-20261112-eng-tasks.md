@@ -360,7 +360,7 @@ BEH-31 и BEH-16, и ожидание с повтором их бы наруши
 - **AC-27** (manual): Should-объём первой версии — подготовка к TUI и Linux
 
 ### TASK-001: Оснастка репозитория инструмента и контроль качества
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Реализовать сценарии BEH-37 (DT-01, группа solo).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-01
