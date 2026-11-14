@@ -1,0 +1,150 @@
+{
+  "absence": [],
+  "attempt_id": "5df03d2f17924d91a95a3f20b8d270a9",
+  "bases": [
+    {
+      "path": "10-requirements.md",
+      "role": "requirements",
+      "sha256": "97163a5acc7edd782b9ed0ec4b3046c4e7014a0f3b8cca6eee980bdd6cc0d79a",
+      "size": 38569
+    },
+    {
+      "path": "15-behaviour-spec.md",
+      "role": "behaviour-spec",
+      "sha256": "5ac61c73ccd2d2e164bac1edd7d10ef8761c7397b47e713b4c7b83499e47b629",
+      "size": 54533
+    }
+  ],
+  "check_identity": "e6a766851b1a1bf147215c956a3332dee23a68f0065da8928635e7466ab339c9",
+  "context": {
+    "estimate_tokens": 33860,
+    "limit_tokens": 120000,
+    "method": "utf8-bytes/4",
+    "reserve_tokens": 8000,
+    "size": 135441,
+    "unit": "utf8-bytes"
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "reason": "Все сценарии BEH-01 … BEH-42 покрыты критериями AC-01 … AC-27 с названным наблюдаемым признаком",
+      "status": "pass"
+    },
+    {
+      "id": "R2",
+      "reason": "Каждое Must-требование FR-01 … FR-11 и NFR-01 … NFR-11 имеет критерий с различимым исходом «выполнено»/«не выполнено»",
+      "status": "pass"
+    },
+    {
+      "id": "R3",
+      "reason": "Критерии не выходят за формулировки требований и сценариев, кроме совещательного добавления в AC-25",
+      "status": "pass"
+    },
+    {
+      "id": "R4",
+      "reason": "Признаки опираются на лог, состояние, файлы каталогов, вывод терминала и код возврата, без доступа к внутреннему состоянию",
+      "status": "pass"
+    }
+  ],
+  "edge": "acceptance-vs-requirements-behaviour",
+  "findings": [
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          388,
+          391
+        ],
+        "path": "25-acceptance.md"
+      },
+      "rule_id": "R1",
+      "statement": "Инвариант И-6 перечисляет собственную нумерацию как «AC-01 … AC-26», хотя документ вводит и использует AC-27 (строка 29 и сам критерий), — инвентарь критериев в инварианте расходится с составом документа."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          345,
+          363
+        ],
+        "path": "25-acceptance.md"
+      },
+      "rule_id": "R2",
+      "statement": "В таблице покрытия у FR-05 и NFR-12 стоит «— (вне объёма)», тогда как AC-27 трассируется именно в FR-05 и NFR-12; таблица не отражает фактическое покрытие Should-требований критерием вне порога."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          312,
+          319
+        ],
+        "path": "25-acceptance.md"
+      },
+      "rule_id": "R2",
+      "statement": "AC-26 отдаёт размер серии прогонов регламенту `tests/manual/reliability-run-series.md`, тогда как BEH-39 и NFR-01 фиксируют серию из 10 прогонов: знаменатель метрики не закреплён критерием и может разойтись с основанием."
+    },
+    {
+      "class": "minor",
+      "location": {
+        "lines": [
+          301,
+          305
+        ],
+        "path": "25-acceptance.md"
+      },
+      "rule_id": "R3",
+      "statement": "AC-25 требует, чтобы отклонение изменения без теста было видно в истории ветки и чтобы факт падения теста до исправления был зафиксирован в истории изменения, — такого обязательства к процессу ни NFR-11, ни BEH-38 не задают."
+    }
+  ],
+  "finished_at": "2026-11-14T09:37:01.573112+00:00",
+  "node": "acceptance",
+  "result_key": "223942ac82d191701b23ef236d53a987e2b878f1994155b3036a4fa82c3f7195",
+  "reviewer": {
+    "effort": null,
+    "env_passthrough": [
+      "HOME",
+      "LANG",
+      "PATH",
+      "TMPDIR",
+      "USER"
+    ],
+    "harness": "claude",
+    "harness_version": "2.1.323 (Claude Code)",
+    "model": "claude-opus-5",
+    "model_id": null
+  },
+  "rules": {
+    "id": "acceptance-vs-requirements-behaviour",
+    "items": [
+      [
+        "R1",
+        "Каждый сценарий BEH покрыт хотя бы одним критерием приёмки (AC-*) с наблюдаемым исходом."
+      ],
+      [
+        "R2",
+        "Каждый Must-FR имеет критерий, различающий «выполнено» и «не выполнено»."
+      ],
+      [
+        "R3",
+        "Критерий не утверждает больше, чем даёт сценарий: нет обязательств вне требований."
+      ],
+      [
+        "R4",
+        "Критерий выполним без доступа к внутреннему состоянию."
+      ]
+    ]
+  },
+  "schema_version": 1,
+  "started_at": "2026-11-14T09:33:08.871620+00:00",
+  "subject": [
+    {
+      "path": "25-acceptance.md",
+      "role": "subject",
+      "sha256": "4366ee7ec8539f77bb732fcf906ee18890d9e42e0faec8e0954806d556371275",
+      "size": 37692
+    }
+  ],
+  "verdict": "PASS",
+  "wave": 4
+}
