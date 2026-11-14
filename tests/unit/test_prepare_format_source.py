@@ -41,6 +41,17 @@ def test_missing_format_source_refuses_before_invocations(tmp_path: Path) -> Non
     assert "источник формата недоступен" in str(err.value.result.stop_reason)
 
 
+def test_tasks_instruction_demands_tests_in_every_task(tmp_path: Path) -> None:
+    """Каркасная задача без тестов не проходит шаг тестов (pytest exit 5)."""
+    from sprc_runner.core.prepare import TASKS_TEST_OBLIGATION
+
+    config = load_config(ROOT / "sprc-runner.toml")
+    agent = EchoAgent()
+    asyncio.run(run_preparation(agent, config, _run_dir(tmp_path), format_root=ROOT))
+    tasks_call = next(c for c in agent.calls if c.stage == "prepare_tasks")
+    assert TASKS_TEST_OBLIGATION in tasks_call.inputs[0]
+
+
 def test_refusal_text_is_not_an_artifact(tmp_path: Path) -> None:
     config = load_config(ROOT / "sprc-runner.toml")
     refusal = StageResult(
