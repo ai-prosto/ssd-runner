@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from sprc_runner.ports import (
+    DiffSummary,
     Outcome,
     ReviewVerdict,
     SpecCheckResult,
@@ -66,8 +67,9 @@ class FakeReviewer:
 class FakeGit:
     """Git в памяти: дифф задан заранее, действия записываются."""
 
-    def __init__(self, diff: str = "") -> None:
+    def __init__(self, diff: str = "", summary: DiffSummary | None = None) -> None:
         self._diff = diff
+        self.summary = summary or DiffSummary()
         self.staged: list[list[str]] = []
         self.commits: list[str] = []
         self.rollbacks = 0
@@ -78,6 +80,9 @@ class FakeGit:
 
     def diff(self, workdir: Path) -> str:
         return self._diff
+
+    def diff_summary(self, workdir: Path) -> DiffSummary:
+        return self.summary
 
     def stage_paths(self, workdir: Path, paths: list[str]) -> None:
         self.staged.append(list(paths))

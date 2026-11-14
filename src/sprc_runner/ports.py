@@ -67,10 +67,36 @@ class ReviewerPort(Protocol):
     async def review(self, request: StageRequest) -> ReviewVerdict: ...
 
 
+@dataclass(frozen=True)
+class DiffEntry:
+    """Изменение одного файла относительно последнего коммита.
+
+    `path` — абсолютный путь; `status` — `A` (создан), `M` (изменён), `D` (удалён);
+    `lines_before` — число строк файла в последнем коммите; `added_text` — добавленные
+    строки (для поиска секрета).
+    """
+
+    path: str
+    status: str
+    added: int = 0
+    removed: int = 0
+    lines_before: int = 0
+    added_text: str = ""
+
+
+@dataclass(frozen=True)
+class DiffSummary:
+    """Структурированная сводка диффа: единственный вход вердикта сторожа."""
+
+    entries: tuple[DiffEntry, ...] = ()
+
+
 class GitPort(Protocol):
     """Git: дифф, индексирование по путям, коммит, откат попытки."""
 
     def diff(self, workdir: Path) -> str: ...
+
+    def diff_summary(self, workdir: Path) -> DiffSummary: ...
 
     def stage_paths(self, workdir: Path, paths: list[str]) -> None: ...
 

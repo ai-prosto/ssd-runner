@@ -88,6 +88,10 @@ class Journal:
         self._seq = 0
         self._starts: dict[tuple[str, str | None, int | None], float] = {}
 
+    @property
+    def run_id(self) -> str:
+        return self._run_id
+
     def emit(self, event_type: EventType | str, **fields: Any) -> dict[str, Any]:
         self._seq += 1
         event = build_event(
