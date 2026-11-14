@@ -9,3 +9,5 @@ run_dir = ".sprc"
 log_dir = "logs"
 log_level = "INFO"
 test_command = "uv run pytest"
+format_skill_path = "schemas/prepare-artifacts-format.toml"  # источник формата артефактов (BEH-09)
+format_skill_version = "1"

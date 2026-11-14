@@ -37,6 +37,17 @@ REQUIREMENTS_INSTRUCTION = "Составь требования по входн�
 TASKS_INSTRUCTION = "Составь список задач по спецификации и требованиям."
 
 
+def with_format_source(instruction: str, config: RunConfig) -> str:
+    """Дополнить текст инструкции ссылкой на источник формата из конфигурации (DEL-47).
+
+    Меняется только текст первого входа; число и порядок входов инвокации прежние.
+    """
+    return (
+        f"{instruction}\nФормат артефакта — по источнику "
+        f"{config.format_skill_path} версии {config.format_skill_version}."
+    )
+
+
 @dataclass(frozen=True)
 class PrepareArtifacts:
     """Пути артефактов подготовки в каталоге прогона."""
@@ -142,7 +153,7 @@ async def run_preparation(
         run_dir,
         "prepare_spec",
         config.model_prepare,
-        (SPEC_INSTRUCTION, description),
+        (with_format_source(SPEC_INSTRUCTION, config), description),
         journal,
         progress,
         checkpoint,
@@ -156,7 +167,7 @@ async def run_preparation(
         run_dir,
         "prepare_requirements",
         config.model_prepare,
-        (REQUIREMENTS_INSTRUCTION, description, spec),
+        (with_format_source(REQUIREMENTS_INSTRUCTION, config), description, spec),
         journal,
         progress,
         checkpoint,
@@ -167,7 +178,7 @@ async def run_preparation(
         run_dir,
         "prepare_tasks",
         config.model_tasks,
-        (TASKS_INSTRUCTION, spec, requirements),
+        (with_format_source(TASKS_INSTRUCTION, config), spec, requirements),
         journal,
         progress,
         checkpoint,

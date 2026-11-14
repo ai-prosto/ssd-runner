@@ -15,7 +15,15 @@ EXIT_CONFIG_REFUSED = 4
 """Код возврата отказа на старте по конфигурации (не 0, не 1, не коды прогона)."""
 
 MODEL_KEYS = ("model_prepare", "model_tasks", "model_implement", "model_review")
-STR_KEYS = ("target_dir", "run_dir", "log_dir", "log_level", "test_command")
+STR_KEYS = (
+    "target_dir",
+    "run_dir",
+    "log_dir",
+    "log_level",
+    "test_command",
+    "format_skill_path",
+    "format_skill_version",
+)
 INT_KEYS = ("max_attempts",)
 ALL_KEYS = (*MODEL_KEYS, *INT_KEYS, *STR_KEYS)
 
@@ -34,6 +42,8 @@ class RunConfig:
     log_dir: str
     log_level: str
     test_command: str
+    format_skill_path: str
+    format_skill_version: str
 
 
 class ConfigError(Exception):
