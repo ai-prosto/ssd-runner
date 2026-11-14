@@ -174,6 +174,21 @@ def set_checklist(text: str, task_id: str, index: int, checked: bool) -> str:
     raise TasksFormatError(f"{task_id}: нет пункта чеклиста {index}")
 
 
+def mark_completed(text: str, task_id: str) -> str:
+    """Отметка о выполнении в формате spec-runner: `✅ DONE` и все пункты `[x]`.
+
+    Меняются только строка меты и чекбоксы задачи; остальной текст не трогается.
+    """
+    text = set_status(text, task_id, "done")
+    lines = text.split("\n")
+    start, end = _task_bounds(lines, task_id)
+    for j in range(start + 1, end):
+        item = CHECKLIST_ITEM.match(lines[j])
+        if item:
+            lines[j] = f"- [x] {item[2]}"
+    return "\n".join(lines)
+
+
 def render_task(task: TaskRecord) -> str:
     """Записать задачу в разметке spec-runner."""
     emoji = STATUS_EMOJI[task.status]
