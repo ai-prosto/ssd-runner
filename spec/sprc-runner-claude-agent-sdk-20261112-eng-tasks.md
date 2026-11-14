@@ -495,7 +495,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-02], [FR-09], [NFR-08]
 
 ### TASK-009: Полнота записи по задаче и проекция «события → задача»
-P2 | TODO   Est: 0.5d
+P2 | 🔄 IN_PROGRESS   Est: 0.5d
 
 Реализовать сценарии BEH-04, BEH-21, BEH-24 (DT-09, группа journal).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-09

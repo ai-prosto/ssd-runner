@@ -215,3 +215,85 @@ def timings(events: list[dict[str, Any]]) -> LogTimings:
         elif event["event"] == EventType.TASK_FINISHED:
             tasks[event["task_id"]] = _timing(event)
     return LogTimings(run, tasks)
+
+
+TASK_ROW_FIELDS = (
+    "started_at",
+    "task_id",
+    "model",
+    "tests_returncode",
+    "review_approved",
+    "attempt",
+    "attempts_total",
+    "success",
+    "error_code",
+    "decision",
+)
+"""Состав FR-06 по задаче; `error_code` обязателен только при неуспехе."""
+
+
+@dataclass(frozen=True)
+class TaskRow:
+    """Строка проекции «события → задача»: поля состава FR-06."""
+
+    task_id: str
+    fields: dict[str, Any]
+
+    @property
+    def missing(self) -> list[str]:
+        """Поля состава, которых нет в строке; любое — дефект, не допустимый пропуск."""
+        absent = [
+            name
+            for name in TASK_ROW_FIELDS
+            if name != "error_code" and self.fields.get(name) in (None, "")
+        ]
+        if self.fields.get("success") is False and not self.fields.get("error_code"):
+            absent.append("error_code")
+        return absent
+
+    @property
+    def complete(self) -> bool:
+        return not self.missing
+
+
+def project_tasks(events: list[dict[str, Any]]) -> list[TaskRow]:
+    """Собрать по каждой завершённой задаче строку из событий журнала."""
+    rows: list[TaskRow] = []
+    for event in events:
+        if event["event"] != EventType.TASK_FINISHED:
+            continue
+        fields = {name: event.get(name) for name in TASK_ROW_FIELDS}
+        fields["started_at"] = event.get("started_at")
+        rows.append(TaskRow(event.get("task_id") or "", fields))
+    return rows
+
+
+@dataclass(frozen=True)
+class Completeness:
+    """Полнота записи по задачам прогона относительно `tasks.md`."""
+
+    total: int
+    complete: int
+    defects: dict[str, list[str]]
+
+    @property
+    def ratio(self) -> float:
+        return self.complete / self.total if self.total else 1.0
+
+
+def completeness(log_text: str, task_ids: list[str]) -> Completeness:
+    """Внешний расчёт доли полных задач по `log.jsonl` и списку задач `tasks.md`.
+
+    Задача без строки в журнале и строка с любым пропущенным полем — дефекты.
+    """
+    rows: dict[str, TaskRow] = {}
+    for row in project_tasks(parse_log(log_text)):
+        rows[row.task_id] = row
+    defects: dict[str, list[str]] = {}
+    for task_id in task_ids:
+        row = rows.get(task_id)
+        if row is None:
+            defects[task_id] = list(TASK_ROW_FIELDS)
+        elif not row.complete:
+            defects[task_id] = row.missing
+    return Completeness(len(task_ids), len(task_ids) - len(defects), defects)

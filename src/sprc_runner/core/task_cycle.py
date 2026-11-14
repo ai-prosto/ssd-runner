@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from sprc_runner.config import RunConfig
+from sprc_runner.core.logbook import EventType, Journal
 from sprc_runner.core.tasks_md import TaskRecord, mark_completed, validate_tasks
 from sprc_runner.ports import (
     AgentPort,
@@ -52,8 +53,18 @@ class AttemptRecord:
     review_passed: bool = False
     tests_returncode: int | None = None
     tests_output_ref: str | None = None
+    tests_command: str | None = None
     spec_checks_passed: bool = False
     success: bool = False
+    model_implement: str = ""
+    model_review: str = ""
+    reviewer_id: str = ""
+    error_code: str | None = None
+
+    @property
+    def decision(self) -> str:
+        """Решение модели на шаге реализации; в критерии успеха не участвует."""
+        return self.implement_outcome.value if self.implement_outcome else ""
 
     def add(self, step: str, detail: str = "") -> None:
         self.steps.append(StepRecord(len(self.steps) + 1, step, detail))
@@ -72,6 +83,20 @@ def task_succeeded(
     `tests_returncode is None` — тесты не запускались, это не успех.
     """
     return review_passed and tests_returncode == 0 and spec_checks_passed
+
+
+def error_code(record: AttemptRecord) -> str | None:
+    """Код ошибки неуспешной попытки — первая по порядку шагов причина."""
+    if record.success:
+        return None
+    if record.implement_outcome is not Outcome.DONE:
+        outcome = record.implement_outcome
+        return f"implement_{outcome.value if outcome else 'missing'}"
+    if not record.review_passed:
+        return "review_rejected"
+    if record.tests_returncode != 0:
+        return "tests_failed"
+    return "spec_checks_failed"
 
 
 def select_tasks(tasks_text: str) -> list[TaskRecord]:
@@ -107,31 +132,86 @@ async def run_attempt(
     task: TaskRecord,
     number: int,
     workdir: Path,
+    journal: Journal | None = None,
 ) -> AttemptRecord:
-    """Выполнить одну попытку: реализация → ревью → тесты → критерий успеха."""
-    record = AttemptRecord(task.id, number)
+    """Выполнить одну попытку: реализация → ревью → тесты → критерий успеха.
+
+    С `journal` каждый шаг и попытка пишутся в журнал с применённой моделью,
+    кодом возврата и командой тестов (BEH-04, BEH-21).
+    """
+    record = AttemptRecord(
+        task.id,
+        number,
+        model_implement=config.model_implement,
+        model_review=config.model_review,
+    )
+    ident = {"task_id": task.id, "attempt": number}
+    if journal:
+        journal.start(EventType.ATTEMPT_STARTED, model=config.model_implement, **ident)
 
     result = await agent.invoke(
         _request(STEP_IMPLEMENT, config, task, workdir, IMPLEMENT_TOOLS)
     )
     record.implement_outcome = result.outcome
     record.add(STEP_IMPLEMENT, result.outcome.value)
+    if journal:
+        journal.emit(
+            EventType.STEP_FINISHED,
+            stage=STEP_IMPLEMENT,
+            model=config.model_implement,
+            outcome=result.outcome.value,
+            **ident,
+        )
 
     verdict = await reviewer.review(
         _request(STEP_REVIEW, config, task, workdir, REVIEW_TOOLS)
     )
     record.review_passed = verdict.approved
+    record.reviewer_id = verdict.reviewer_id
     record.add(STEP_REVIEW, "approved" if verdict.approved else "rejected")
+    if journal:
+        journal.emit(
+            EventType.STEP_FINISHED,
+            stage=STEP_REVIEW,
+            model=config.model_review,
+            approved=verdict.approved,
+            reviewer_id=verdict.reviewer_id,
+            **ident,
+        )
 
     run = tests.run(workdir, config.test_command)
     record.tests_returncode = run.returncode
     record.tests_output_ref = run.output_ref
+    record.tests_command = run.command
     record.add(STEP_TESTS, f"returncode={run.returncode}")
+    if journal:
+        journal.emit(
+            EventType.STEP_FINISHED,
+            stage=STEP_TESTS,
+            returncode=run.returncode,
+            command=run.command,
+            output_ref=run.output_ref,
+            **ident,
+        )
 
     record.spec_checks_passed = spec_checker.check(workdir, task.id).passed
     record.success = result.outcome is Outcome.DONE and task_succeeded(
         record.review_passed, record.tests_returncode, record.spec_checks_passed
     )
+    record.error_code = error_code(record)
+    if journal:
+        journal.finish(
+            EventType.ATTEMPT_FINISHED,
+            model=config.model_implement,
+            success=record.success,
+            error_code=record.error_code,
+            decision=record.decision,
+            review_approved=record.review_passed,
+            tests_returncode=run.returncode,
+            tests_command=run.command,
+            model_review=config.model_review,
+            **ident,
+        )
     return record
 
 
@@ -183,8 +263,28 @@ class RunResult:
         return [a for r in self.results for a in r.attempts]
 
 
+def _task_finished_fields(result: TaskResult) -> dict[str, object]:
+    """Поля состава FR-06 для `task_finished`: единственный источник — попытки."""
+    last = result.attempts[-1]
+    return {
+        "model": last.model_implement,
+        "model_review": last.model_review,
+        "tests_returncode": last.tests_returncode,
+        "tests_command": last.tests_command,
+        "review_approved": last.review_passed,
+        "attempt": last.number,
+        "attempts_total": len(result.attempts),
+        "success": result.succeeded,
+        "error_code": None if result.succeeded else last.error_code,
+        "decision": last.decision,
+    }
+
+
 async def run_tasks(
-    tasks_text: str, attempt: AttemptFn, max_attempts: int
+    tasks_text: str,
+    attempt: AttemptFn,
+    max_attempts: int,
+    journal: Journal | None = None,
 ) -> RunResult:
     """Пройти задачи по порядку; отметка о выполнении — только после успеха (BEH-28).
 
@@ -194,8 +294,16 @@ async def run_tasks(
     results: list[TaskResult] = []
     text = tasks_text
     for task in select_tasks(tasks_text):
+        if journal:
+            journal.start(EventType.TASK_STARTED, task_id=task.id)
         result = await run_task(task, attempt, max_attempts)
         results.append(result)
+        if journal and result.attempts:
+            journal.finish(
+                EventType.TASK_FINISHED,
+                task_id=task.id,
+                **_task_finished_fields(result),
+            )
         if result.succeeded:
             text = mark_completed(text, task.id)
     return RunResult(results, text)
