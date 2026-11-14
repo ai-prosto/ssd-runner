@@ -24,6 +24,11 @@ ROOT = Path(__file__).resolve().parents[1]
 def config_file(tmp_path_factory: pytest.TempPathFactory) -> Path:
     path = tmp_path_factory.mktemp("cfg") / "sprc-runner.toml"
     shutil.copy(ROOT / "sprc-runner.toml", path)
+    # Источник формата лежит рядом с конфигом, как в репозитории: CLI разрешает
+    # ссылку от каталога файла конфигурации и включает содержимое в инструкции.
+    schema = Path("schemas/prepare-artifacts-format.toml")
+    (path.parent / schema).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(ROOT / schema, path.parent / schema)
     return path
 
 

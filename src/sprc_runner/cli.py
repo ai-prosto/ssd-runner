@@ -272,6 +272,7 @@ def _run(
                 journal=journal,
                 progress=progress,
                 checkpoint=checkpoint,
+                format_root=(cwd / args.config).resolve().parent,
             )
             ports = _resolve(loop, runner, config, run_dir, target, cwd)
             if ports is None:

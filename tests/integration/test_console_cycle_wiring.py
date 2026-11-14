@@ -39,7 +39,8 @@ class ProtocolAgent(EchoAgent):
             (request.workdir / f"mod{self.implemented}.py").write_text("x = 1\n")
         if request.stage == "review":
             return StageResult(Outcome.DONE, self.verdict, None, "end_turn")
-        return StageResult(Outcome.DONE, "ok", None, "end_turn")
+        # этапы подготовки: заголовок обязателен — текст без него считается отказом
+        return StageResult(Outcome.DONE, "# ok", None, "end_turn")
 
 
 @pytest.fixture
