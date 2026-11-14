@@ -1,0 +1,13 @@
+# Единственный файл настроек прогона sprc-runner. Все ключи обязательны.
+model_prepare = "sonnet"    # этап 1: подготовка спеки и требований
+model_tasks = "sonnet"      # этап 2: составление списка задач
+model_implement = "sonnet"  # этап 3: реализация кода
+model_review = "sonnet"     # этап 4: ревью
+max_attempts = 3
+target_dir = ".sdd-runs"
+run_dir = ".sprc"
+log_dir = "logs"
+log_level = "INFO"
+test_command = "uv run pytest"
+format_skill_path = "schemas/prepare-artifacts-format.toml"  # источник формата артефактов (BEH-09)
+format_skill_version = "1"
