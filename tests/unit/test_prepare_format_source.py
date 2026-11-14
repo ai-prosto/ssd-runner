@@ -52,6 +52,17 @@ def test_tasks_instruction_demands_tests_in_every_task(tmp_path: Path) -> None:
     assert TASKS_TEST_OBLIGATION in tasks_call.inputs[0]
 
 
+def test_every_stage_states_the_response_contract(tmp_path: Path) -> None:
+    """Серия 2026-11-14: без контракта ответа агент оборачивал артефакт прозой."""
+    from sprc_runner.core.prepare import RESPONSE_CONTRACT
+
+    config = load_config(ROOT / "sprc-runner.toml")
+    agent = EchoAgent()
+    asyncio.run(run_preparation(agent, config, _run_dir(tmp_path), format_root=ROOT))
+    for call in agent.calls:
+        assert RESPONSE_CONTRACT in call.inputs[0], call.stage
+
+
 def test_refusal_text_is_not_an_artifact(tmp_path: Path) -> None:
     config = load_config(ROOT / "sprc-runner.toml")
     refusal = StageResult(
