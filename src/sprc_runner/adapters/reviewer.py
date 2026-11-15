@@ -14,24 +14,38 @@ APPROVED = "APPROVED"
 REJECTED = "REJECTED"
 INSTRUCTION = (
     "Проведи ревью реализации задачи: прочитай изменённые файлы и сопоставь их "
-    "с чек-листом. Первой строкой ответа напиши ровно одно слово: "
-    f"{APPROVED} (замечаний нет) или {REJECTED} (есть замечания); "
-    "со следующей строки — комментарии."
+    "с чек-листом. В ответе ровно одна строка-вердикт из одного слова: "
+    f"{APPROVED} (замечаний нет) или {REJECTED} (есть замечания) — "
+    "предпочтительно первой строкой; остальные строки — комментарии, "
+    "и слова вердиктов в них не используй."
 )
 
 
 def parse_verdict(text: str) -> tuple[bool, str]:
-    """Первая непустая строка — вердикт; всё остальное — комментарии."""
-    lines = text.strip().splitlines()
-    if not lines:
-        return False, "пустой ответ ревью"
-    head = lines[0].strip().strip("*`#. ").upper()
-    rest = "\n".join(lines[1:]).strip()
-    if head == APPROVED:
-        return True, rest
-    if head == REJECTED:
-        return False, rest
-    return False, f"вердикт не разобран: {text.strip()}"
+    """Строка-вердикт ищется во всём ответе; неоднозначность — отказ.
+
+    Серия 4 (2026-11-15): модель иногда ставит преамбулу перед вердиктом,
+    и честный APPROVED засчитывался отказом, пока разбиралась только первая
+    строка. Вердикт — отдельная строка со словом APPROVED или REJECTED;
+    если таких строк нет или они противоречат друг другу, ревью
+    не пропускает (fail-closed).
+    """
+    found: list[str] = []
+    comments: list[str] = []
+    for line in text.strip().splitlines():
+        token = line.strip().strip("*`#:. ").upper()
+        if token in (APPROVED, REJECTED):
+            found.append(token)
+        else:
+            comments.append(line)
+    verdicts = set(found)
+    if verdicts == {APPROVED}:
+        return True, "\n".join(comments).strip()
+    if verdicts == {REJECTED}:
+        return False, "\n".join(comments).strip()
+    if not found:
+        return False, f"вердикт не разобран: {text.strip()}"
+    return False, f"вердикт противоречив: {text.strip()}"
 
 
 class SdkReviewer:

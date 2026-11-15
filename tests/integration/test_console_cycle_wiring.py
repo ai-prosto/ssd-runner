@@ -105,6 +105,15 @@ def test_resume_continues_cycle_without_ports(repo_config) -> None:
         ("**REJECTED**\nбаг", False),
         ("", False),
         ("looks fine", False),
+        # серия 4: преамбула перед вердиктом — честный APPROVED не теряется
+        (
+            "Я ревьюирую TASK-003. Тесты не гонял.\n\nAPPROVED\n\n- всё по чек-листу",
+            True,
+        ),
+        ("Проверил.\n**APPROVED**", True),
+        # противоречивые вердикты — fail-closed
+        ("APPROVED\nно вообще REJECTED", True),
+        ("APPROVED\nREJECTED", False),
     ],
 )
 def test_parse_verdict(text: str, approved: bool) -> None:
