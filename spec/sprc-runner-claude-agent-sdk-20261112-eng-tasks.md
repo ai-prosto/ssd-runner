@@ -641,7 +641,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-03], [FR-07], [NFR-01]
 
 ### TASK-018: Регламенты: приём изменений и серия надёжности
-P2 | 🔄 IN_PROGRESS   Est: 0.5d
+P2 | ✅ DONE   Est: 0.5d
 
 Реализовать сценарии BEH-38, BEH-39 (DT-18, группа regulations).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-18
@@ -649,14 +649,14 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Depends on:** [TASK-001], [TASK-017]
 
 **Checklist:**
-- [ ] реализовать BEH-38: Изменение сопровождается тестом, дефект — регрессионным тестом (DEL-52 (document): Чек-лист `tests/manual/change-review-checklist.md` даёт ревьюеру проверки «есть сопровождающий тест на новую функцию», «для дефекта есть тест, падавший до исправления и проходящий после» и «ruff, pyrefly, pytest зелёные», и изменение без такого теста отклоняется с видимым в истории ветки отклонением)
-- [ ] реализовать BEH-39: Надёжность прогонов соответствует заявленному порогу (DEL-53 (document): Журнал серии прогонов `tests/manual/reliability-run-series.md` несёт по единому регламенту исходы серии на эталонных входных описаниях, модели этапов каждого прогона, действующий порог и долю успешно завершённых прогонов серии)
-- [ ] проверка группы: tests/manual/change-review-checklist.md (kind: manual), tests/manual/reliability-run-series.md (kind: manual) зелёные на BEH-38, BEH-39
+- [x] реализовать BEH-38: Изменение сопровождается тестом, дефект — регрессионным тестом (DEL-52 (document): Чек-лист `tests/manual/change-review-checklist.md` даёт ревьюеру проверки «есть сопровождающий тест на новую функцию», «для дефекта есть тест, падавший до исправления и проходящий после» и «ruff, pyrefly, pytest зелёные», и изменение без такого теста отклоняется с видимым в истории ветки отклонением)
+- [x] реализовать BEH-39: Надёжность прогонов соответствует заявленному порогу (DEL-53 (document): Журнал серии прогонов `tests/manual/reliability-run-series.md` несёт по единому регламенту исходы серии на эталонных входных описаниях, модели этапов каждого прогона, действующий порог и долю успешно завершённых прогонов серии)
+- [x] проверка группы: tests/manual/change-review-checklist.md (kind: manual), tests/manual/reliability-run-series.md (kind: manual) зелёные на BEH-38, BEH-39
 
 **Traces to:** [NFR-11], [NFR-01]
 
 ### TASK-019: Should-объём: Linux и готовность контрактов к отложенному TUI
-P2 | TODO   Est: 0.5d
+P2 | ✅ DONE   Est: 0.5d
 
 Реализовать сценарии BEH-40, BEH-41 (DT-19, группа regulations).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-19
@@ -664,9 +664,9 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Depends on:** [TASK-018]
 
 **Checklist:**
-- [ ] реализовать BEH-40: Тесты проекта проходят на Linux (DEL-54 (capability): Тесты проекта, запущенные на машине с Linux и установленным uv, проходят так же, как на macOS)
-- [ ] реализовать BEH-41: Отложенный TUI не потребует изменения контрактов логов и состояния (DEL-55 (document): Разбор `tests/manual/tui-contract-readiness.md` показывает, что статус текущей задачи — этап, номер попытки, исход — и её лог восстанавливаются из уже существующих `log.jsonl` и `state.json` без изменения их форматов)
-- [ ] проверка группы: tests/integration/test_linux_compatibility.py (kind: integration), tests/manual/tui-contract-readiness.md (kind: manual) зелёные на BEH-40, BEH-41
+- [x] реализовать BEH-40: Тесты проекта проходят на Linux (DEL-54 (capability): Тесты проекта, запущенные на машине с Linux и установленным uv, проходят так же, как на macOS)
+- [x] реализовать BEH-41: Отложенный TUI не потребует изменения контрактов логов и состояния (DEL-55 (document): Разбор `tests/manual/tui-contract-readiness.md` показывает, что статус текущей задачи — этап, номер попытки, исход — и её лог восстанавливаются из уже существующих `log.jsonl` и `state.json` без изменения их форматов)
+- [x] проверка группы: tests/integration/test_linux_compatibility.py (kind: integration), tests/manual/tui-contract-readiness.md (kind: manual) зелёные на BEH-40, BEH-41
 
 **Traces to:** [NFR-12], [FR-05]
 
