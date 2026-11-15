@@ -54,13 +54,26 @@ def test_tasks_instruction_demands_tests_in_every_task(tmp_path: Path) -> None:
 
 def test_every_stage_states_the_response_contract(tmp_path: Path) -> None:
     """Серия 2026-11-14: без контракта ответа агент оборачивал артефакт прозой."""
-    from sprc_runner.core.prepare import RESPONSE_CONTRACT
+    from sprc_runner.core.prepare import INPUTS_ARE_NOT_A_SAMPLE, RESPONSE_CONTRACT
 
     config = load_config(ROOT / "sprc-runner.toml")
     agent = EchoAgent()
     asyncio.run(run_preparation(agent, config, _run_dir(tmp_path), format_root=ROOT))
     for call in agent.calls:
         assert RESPONSE_CONTRACT in call.inputs[0], call.stage
+        assert INPUTS_ARE_NOT_A_SAMPLE in call.inputs[0], call.stage
+
+
+def test_tasks_instruction_carries_markup_example(tmp_path: Path) -> None:
+    """Серия 2 (2026-11-15): эталон не показывает разметку задач — нужен пример."""
+    from sprc_runner.core.prepare import TASKS_INSTRUCTION, TASKS_MARKUP_EXAMPLE
+    from sprc_runner.core.tasks_md import parse_tasks
+
+    assert TASKS_MARKUP_EXAMPLE in TASKS_INSTRUCTION
+    # пример из инструкции разбирается нашим же парсером — он не устареет молча
+    example = TASKS_MARKUP_EXAMPLE.split("например:\n", 1)[1]
+    (task,) = parse_tasks(example)
+    assert task.id == "TASK-001" and task.status == "todo"
 
 
 def test_refusal_text_is_not_an_artifact(tmp_path: Path) -> None:
