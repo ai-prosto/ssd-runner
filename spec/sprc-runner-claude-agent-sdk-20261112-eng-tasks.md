@@ -641,7 +641,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [FR-03], [FR-07], [NFR-01]
 
 ### TASK-018: Регламенты: приём изменений и серия надёжности
-P2 | 🔄 IN_PROGRESS   Est: 0.5d
+P2 | 🔍 REVIEW   Est: 0.5d
 
 Реализовать сценарии BEH-38, BEH-39 (DT-18, группа regulations).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-18
