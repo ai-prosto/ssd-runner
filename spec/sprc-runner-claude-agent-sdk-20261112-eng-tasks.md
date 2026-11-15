@@ -656,7 +656,7 @@ Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposit
 **Traces to:** [NFR-11], [NFR-01]
 
 ### TASK-019: Should-объём: Linux и готовность контрактов к отложенному TUI
-P2 | 🔄 IN_PROGRESS   Est: 0.5d
+P2 | 🔍 REVIEW   Est: 0.5d
 
 Реализовать сценарии BEH-40, BEH-41 (DT-19, группа regulations).
 Source: workstreams/sprc-runner-claude-agent-sdk-20261112-eng/spec/30-decomposition.md#DT-19

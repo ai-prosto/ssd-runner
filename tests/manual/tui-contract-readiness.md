@@ -19,7 +19,7 @@ DEL-55. Ручная проверка готовности контрактов 
 |---|---|---|
 | Задача в работе | `state.json` | `cursor.task_id` (и `tasks[].status == in_progress`) |
 | Номер идущей попытки | `state.json` | `cursor.attempt`; запасной путь — `attempt` последнего `attempt_started` без `attempt_finished` в `log.jsonl` |
-| Этап | `log.jsonl` | `stage` последней записи `step_finished`/`stage_started` по задаче: `implement` → `review` → `tests` |
+| Этап | `log.jsonl` | `stage` последней записи `step_finished` по задаче: `implement` → `review` → `tests` (`stage_started` относится только к этапам подготовки) |
 | Исход последней попытки | `state.json` | `tasks[].last_attempt` (`number`, `success`, `error_code`) |
 | Исход последней попытки (детали) | `log.jsonl` | `attempt_finished`: `success`, `error_code`, `decision`, `review_approved`, `tests_returncode` |
 | Исход задачи | `log.jsonl` | `task_finished`: `success`, `error_code`, `attempt`, `attempts_total` |
