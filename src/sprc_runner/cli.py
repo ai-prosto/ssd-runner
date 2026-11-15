@@ -51,7 +51,12 @@ from sprc_runner.core.state import (
     resume_run,
     unfinished_ids,
 )
-from sprc_runner.core.task_cycle import run_attempt, run_tasks, select_tasks
+from sprc_runner.core.task_cycle import (
+    AttemptRecord,
+    run_attempt,
+    run_tasks,
+    select_tasks,
+)
 from sprc_runner.core.tasks_md import TaskRecord, parse_tasks
 from sprc_runner.ports import (
     AgentPort,
@@ -155,9 +160,10 @@ async def _loop_tasks(
     attempts_done: Mapping[str, int] | None = None,
 ) -> int:
     """Цикл задач с чекпойнтом; общий для `run` и `resume`."""
+    last_records: dict[str, AttemptRecord] = {}
 
     async def attempt(task: TaskRecord, number: int):
-        return await run_attempt(
+        record = await run_attempt(
             agent=runner,
             reviewer=loop.reviewer,
             tests=loop.tests,
@@ -172,7 +178,10 @@ async def _loop_tasks(
             charter_root=charter_root,
             files=loop.files,
             evidence_dir=checkpoint.run_dir / "evidence" if loop.files else None,
+            previous=last_records.get(task.id),
         )
+        last_records[task.id] = record
+        return record
 
     result = await run_tasks(
         tasks_text,
