@@ -10,7 +10,12 @@ from typing import NoReturn, TextIO
 
 import anyio
 
+from sprc_runner.adapters.clock import SystemClock
 from sprc_runner.adapters.fs import LocalFiles
+from sprc_runner.adapters.git import GitRepo, ensure_repo
+from sprc_runner.adapters.reviewer import SdkReviewer
+from sprc_runner.adapters.spec_check import TestsCarrySpecChecks
+from sprc_runner.adapters.tests import SubprocessTestRunner
 from sprc_runner.config import (
     EXIT_CONFIG_REFUSED,
     RunConfig,
@@ -18,6 +23,7 @@ from sprc_runner.config import (
 )
 from sprc_runner.core.checkpoint import RunCheckpoint
 from sprc_runner.core.layout import resolve_target
+from sprc_runner.core.logbook import LOG_NAME, EventType, Journal
 from sprc_runner.core.prepare import (
     INPUT_NAME,
     STAGE_NAMES,
@@ -45,10 +51,16 @@ from sprc_runner.core.state import (
     resume_run,
     unfinished_ids,
 )
-from sprc_runner.core.task_cycle import run_attempt, run_tasks, select_tasks
+from sprc_runner.core.task_cycle import (
+    AttemptRecord,
+    run_attempt,
+    run_tasks,
+    select_tasks,
+)
 from sprc_runner.core.tasks_md import TaskRecord, parse_tasks
 from sprc_runner.ports import (
     AgentPort,
+    FilePort,
     GitPort,
     Outcome,
     ReviewerPort,
@@ -91,6 +103,24 @@ class LoopPorts:
     tests: TestRunnerPort
     spec_checker: SpecCheckerPort
     git: GitPort | None = None
+    files: FilePort | None = None
+
+
+LoopFactory = Callable[[AgentPort, RunConfig, Path, Path, Path], LoopPorts]
+"""Сборка портов цикла: агент, конфигурация, каталог прогона, цель, корень устава."""
+
+
+def build_loop(
+    agent: AgentPort, config: RunConfig, run_dir: Path, target: Path, cwd: Path
+) -> LoopPorts:
+    """Реальные порты цикла для консольных команд; подменяется только агент."""
+    return LoopPorts(
+        reviewer=SdkReviewer(agent),
+        tests=SubprocessTestRunner(run_dir / "tests-output"),
+        spec_checker=TestsCarrySpecChecks(),
+        git=GitRepo(target, cwd),
+        files=LocalFiles(),
+    )
 
 
 def build_agent(run_dir: Path) -> AgentPort:
@@ -125,13 +155,15 @@ async def _loop_tasks(
     charter_root: Path,
     progress: Progress,
     err: TextIO,
+    journal: Journal | None = None,
     only: Collection[str] | None = None,
     attempts_done: Mapping[str, int] | None = None,
 ) -> int:
     """Цикл задач с чекпойнтом; общий для `run` и `resume`."""
+    last_records: dict[str, AttemptRecord] = {}
 
     async def attempt(task: TaskRecord, number: int):
-        return await run_attempt(
+        record = await run_attempt(
             agent=runner,
             reviewer=loop.reviewer,
             tests=loop.tests,
@@ -140,15 +172,22 @@ async def _loop_tasks(
             task=task,
             number=number,
             workdir=target,
+            journal=journal,
             git=loop.git,
             target=target,
             charter_root=charter_root,
+            files=loop.files,
+            evidence_dir=checkpoint.run_dir / "evidence" if loop.files else None,
+            previous=last_records.get(task.id),
         )
+        last_records[task.id] = record
+        return record
 
     result = await run_tasks(
         tasks_text,
         attempt,
         config.max_attempts,
+        journal=journal,
         progress=progress,
         checkpoint=checkpoint,
         only=only,
@@ -159,6 +198,11 @@ async def _loop_tasks(
     if not result.aborted:
         checkpoint.finished(status.value)
     progress.run_finished(status, done_count(state), len(state.tasks))
+    if journal:
+        if result.aborted:
+            journal.emit(EventType.RUN_PAUSED, reason=status.value)
+        else:
+            journal.finish(EventType.RUN_FINISHED, outcome=status.value)
     if result.aborted:
         last = result.attempts[-1]
         if last.implement_outcome is Outcome.SUBSCRIPTION_LIMIT:
@@ -202,7 +246,7 @@ def _run(
     agent: AgentPort | None,
     out: TextIO,
     err: TextIO,
-    loop: LoopPorts | None = None,
+    loop: LoopPorts | LoopFactory | None = None,
 ) -> int:
     loaded = load_config_or_report((cwd / args.config), err)
     if not isinstance(loaded, RunConfig):
@@ -224,21 +268,33 @@ def _run(
     )
     checkpoint.save()
     progress = Progress(out)
+    journal = Journal(run_dir / LOG_NAME, run_id, LocalFiles(), SystemClock())
 
     async def go() -> int:
         runner = agent or build_agent(run_dir)
+        journal.start(EventType.RUN_STARTED)
         try:
             artifacts = await run_preparation(
-                runner, config, run_dir, progress=progress, checkpoint=checkpoint
+                runner,
+                config,
+                run_dir,
+                journal=journal,
+                progress=progress,
+                checkpoint=checkpoint,
+                format_root=(cwd / args.config).resolve().parent,
             )
-            if loop is None:
+            ports = _resolve(loop, runner, config, run_dir, target, cwd)
+            if ports is None:
                 checkpoint.finished("prepared")
+                journal.finish(EventType.RUN_FINISHED, outcome="prepared")
                 return EXIT_OK
+            if ports.git is not None:
+                ensure_repo(target)
             tasks_text = artifacts.tasks.read_text(encoding="utf-8")
             checkpoint.tasks_registered([t.id for t in select_tasks(tasks_text)])
             return await _loop_tasks(
                 runner=runner,
-                loop=loop,
+                loop=ports,
                 config=config,
                 checkpoint=checkpoint,
                 tasks_text=tasks_text,
@@ -246,9 +302,14 @@ def _run(
                 charter_root=cwd,
                 progress=progress,
                 err=err,
+                journal=journal,
             )
         except PrepareError as exc:
             checkpoint.paused(f"{exc.stage}_{exc.result.outcome.value}")
+            journal.emit(
+                EventType.RUN_PAUSED,
+                reason=f"{exc.stage}_{exc.result.outcome.value}",
+            )
             if exc.result.outcome is Outcome.SUBSCRIPTION_LIMIT:
                 print(limit_message(run_dir), file=err)
             else:
@@ -258,6 +319,19 @@ def _run(
             await runner.close()
 
     return _drive(go, checkpoint, run_dir, err)
+
+
+def _resolve(
+    loop: LoopPorts | LoopFactory | None,
+    runner: AgentPort,
+    config: RunConfig,
+    run_dir: Path,
+    target: Path,
+    cwd: Path,
+) -> LoopPorts | None:
+    if callable(loop):
+        return loop(runner, config, run_dir, target, cwd)
+    return loop
 
 
 def _refuse(err: TextIO, message: str) -> int:
@@ -271,7 +345,7 @@ def _resume(
     agent: AgentPort | None,
     out: TextIO,
     err: TextIO,
-    loop: LoopPorts | None = None,
+    loop: LoopPorts | LoopFactory | None = None,
 ) -> int:
     loaded = load_config_or_report((cwd / args.config), err)
     if not isinstance(loaded, RunConfig):
@@ -302,13 +376,19 @@ def _resume(
     if following is not None:
         print(f"Возобновление с задачи {following.task_id}", file=out)
     progress = Progress(out)
+    journal = Journal(run_dir / LOG_NAME, state.run_id, LocalFiles(), SystemClock())
 
     async def go() -> int:
         runner = agent or build_agent(run_dir)
+        journal.start(EventType.RUN_STARTED)
         try:
+            ports = _resolve(loop, runner, config, run_dir, target, cwd)
+            assert ports is not None
+            if ports.git is not None:
+                ensure_repo(target)
             return await _loop_tasks(
                 runner=runner,
-                loop=loop,
+                loop=ports,
                 config=config,
                 checkpoint=checkpoint,
                 tasks_text=tasks_text,
@@ -316,6 +396,7 @@ def _resume(
                 charter_root=cwd,
                 progress=progress,
                 err=err,
+                journal=journal,
                 only=unfinished_ids(state),
                 attempts_done={t.task_id: t.attempts for t in state.tasks},
             )
@@ -332,7 +413,7 @@ def main(
     agent: AgentPort | None = None,
     out: TextIO | None = None,
     err: TextIO | None = None,
-    loop: LoopPorts | None = None,
+    loop: LoopPorts | LoopFactory | None = None,
 ) -> int:
     """Точка входа CLI; возвращает код возврата."""
     out = out or sys.stdout
@@ -344,3 +425,15 @@ def main(
         return _resume(args, cwd or Path.cwd(), agent, out, err, loop)
     print("sprc-runner", file=out)
     return EXIT_OK
+
+
+def console(
+    argv: Sequence[str] | None = None,
+    *,
+    cwd: Path | None = None,
+    agent: AgentPort | None = None,
+    out: TextIO | None = None,
+    err: TextIO | None = None,
+) -> int:
+    """Консольная точка входа: `run` и `resume` собирают реальные порты цикла."""
+    return main(argv, cwd=cwd, agent=agent, out=out, err=err, loop=build_loop)

@@ -5,11 +5,11 @@ description = "Аналог sprc-runner на Claude Agent SDK"
 requires-python = ">=3.12"
 dependencies = [
     "anyio>=4.16.0",
-    "claude-agent-sdk==0.1.0",
+    "claude-agent-sdk==0.2.182",
 ]
 
 [project.scripts]
-sprc-runner = "sprc_runner:main"
+sprc-runner = "sprc_runner:console"
 
 [build-system]
 requires = ["uv_build>=0.11.28,<0.12.0"]

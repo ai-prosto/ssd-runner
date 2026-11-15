@@ -32,19 +32,119 @@ PREPARE_TIMEOUT_SECONDS = 1800.0
 PREPARE_TOOLS = ("Read",)
 """Подготовительные этапы только читают; артефакты пишет раннер в каталог прогона."""
 
-SPEC_INSTRUCTION = "Составь спецификацию по входному описанию."
-REQUIREMENTS_INSTRUCTION = "Составь требования по входному описанию и спецификации."
-TASKS_INSTRUCTION = "Составь список задач по спецификации и требованиям."
+RESPONSE_CONTRACT = (
+    "Ответь только текстом артефакта: без пояснений, без преамбул и без "
+    "обёрток ``` — твой ответ дословно станет содержимым файла. Файл записывает "
+    "раннер, инструментов записи у тебя нет и попытки записи будут отклонены."
+)
+"""Серия 2026-11-14: 6 из 10 прогонов упали, потому что агент пытался писать
+файлы сам и возвращал пояснение с артефактом в ```-обёртке."""
+
+INPUTS_ARE_NOT_A_SAMPLE = (
+    "Тексты после инструкции — входные данные (описание, спецификация, "
+    "требования), а не образец ответа: не повторяй их жанр, составь именно "
+    "запрошенный артефакт."
+)
+"""Серия 2 (2026-11-15): на этапе списка задач модель 4 раза вернула
+спецификацию — непомеченные входы читались как образец ответа."""
+
+TASKS_MARKUP_EXAMPLE = (
+    "Разметка каждой записи — формат spec-runner, например:\n"
+    "### TASK-001: Короткое название\n"
+    "P2 | ⬜ TODO   Est: 1h\n\n"
+    "**Checklist:**\n"
+    "- [ ] шаг, проверяемый тестом\n"
+)
+"""Формат-эталон разметку задач не показывает; без примера модель писала её
+по памяти или не писала вовсе."""
+
+SPEC_INSTRUCTION = (
+    "Составь спецификацию по входному описанию. Твой ответ — артефакт "
+    "«спецификация». " + INPUTS_ARE_NOT_A_SAMPLE + " " + RESPONSE_CONTRACT
+)
+REQUIREMENTS_INSTRUCTION = (
+    "Составь требования по входному описанию и спецификации. Твой ответ — "
+    "артефакт «требования». " + INPUTS_ARE_NOT_A_SAMPLE + " " + RESPONSE_CONTRACT
+)
+TASKS_TEST_OBLIGATION = (
+    "Каждая задача списка, включая первую (каркас), обязана добавлять или менять "
+    "автотесты сделанного: после её выполнения pytest должен собрать и пройти "
+    "хотя бы один тест. Задача, после которой pytest не собирает ни одного теста, "
+    "будет провалена по коду возврата — не планируй таких задач."
+)
+"""Живой прогон 2026-11-14: каркасная задача без тестов падает на pytest exit 5."""
+
+TASKS_INSTRUCTION = (
+    "Составь список задач по спецификации и требованиям. Твой ответ — артефакт "
+    "«список задач», а не спецификация и не требования. "
+    + INPUTS_ARE_NOT_A_SAMPLE
+    + " "
+    + TASKS_TEST_OBLIGATION
+    + " "
+    + RESPONSE_CONTRACT
+    + "\n"
+    + TASKS_MARKUP_EXAMPLE
+)
 
 
-def with_format_source(instruction: str, config: RunConfig) -> str:
-    """Дополнить текст инструкции ссылкой на источник формата из конфигурации (DEL-47).
+def with_format_source(
+    instruction: str, config: RunConfig, body: str | None = None
+) -> str:
+    """Дополнить текст инструкции источником формата из конфигурации (DEL-47).
 
     Меняется только текст первого входа; число и порядок входов инвокации прежние.
+    С `body` содержимое источника приводится прямо в инструкции: рабочий каталог
+    агента — каталог прогона, и файл по относительной ссылке оттуда не прочитать
+    (живой прогон 2026-11-14 вернул артефакты-отказы, помеченные done).
     """
-    return (
+    head = (
         f"{instruction}\nФормат артефакта — по источнику "
         f"{config.format_skill_path} версии {config.format_skill_version}."
+    )
+    if body is None:
+        return head
+    return f"{head} Содержимое источника — единственный эталон структуры:\n\n{body}"
+
+
+def format_source_body(config: RunConfig, format_root: Path) -> str:
+    """Содержимое источника формата; его отсутствие — отказ до первой инвокации."""
+    path = format_root / config.format_skill_path
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PrepareError(
+            "prepare_spec",
+            StageResult(
+                Outcome.OTHER_FAILURE,
+                "",
+                None,
+                f"источник формата недоступен: {path}: {exc.strerror or exc}",
+            ),
+        ) from exc
+
+
+def _ensure_structured(
+    stage: str, model: str, text: str, checkpoint: "RunCheckpoint | None"
+) -> None:
+    """Текст без единого заголовка — отказ модели, а не артефакт подготовки.
+
+    Слова модели не превращают отказ в артефакт (та же дисциплина, что BEH-20
+    для цикла задач): этап помечается неуспешным, текст остаётся на диске
+    как эвиденция.
+    """
+    if any(line.lstrip().startswith("#") for line in text.splitlines()):
+        return
+    if checkpoint:
+        checkpoint.stage_finished(stage, model, False)
+    raise PrepareError(
+        stage,
+        StageResult(
+            Outcome.OTHER_FAILURE,
+            text,
+            None,
+            f"{stage}: в артефакте нет ни одного заголовка — "
+            "текст отказа вместо артефакта",
+        ),
     )
 
 
@@ -145,15 +245,21 @@ async def run_preparation(
     journal: Journal | None = None,
     progress: Progress | None = None,
     checkpoint: RunCheckpoint | None = None,
+    format_root: Path | None = None,
 ) -> PrepareArtifacts:
-    """Выполнить подготовку: спека → требования → список задач."""
+    """Выполнить подготовку: спека → требования → список задач.
+
+    С `format_root` содержимое источника формата читается до первой инвокации
+    и включается в инструкции этапов; без него остаётся только ссылка.
+    """
+    body = None if format_root is None else format_source_body(config, format_root)
     description = (run_dir / INPUT_NAME).read_bytes().decode("utf-8", errors="replace")
     spec = await _invoke(
         agent,
         run_dir,
         "prepare_spec",
         config.model_prepare,
-        (with_format_source(SPEC_INSTRUCTION, config), description),
+        (with_format_source(SPEC_INSTRUCTION, config, body), description),
         journal,
         progress,
         checkpoint,
@@ -162,23 +268,27 @@ async def run_preparation(
         run_dir / SPEC_NAME, run_dir / REQUIREMENTS_NAME, run_dir / TASKS_NAME
     )
     paths.spec.write_text(spec, encoding="utf-8")
+    _ensure_structured("prepare_spec", config.model_prepare, spec, checkpoint)
     requirements = await _invoke(
         agent,
         run_dir,
         "prepare_requirements",
         config.model_prepare,
-        (with_format_source(REQUIREMENTS_INSTRUCTION, config), description, spec),
+        (with_format_source(REQUIREMENTS_INSTRUCTION, config, body), description, spec),
         journal,
         progress,
         checkpoint,
     )
     paths.requirements.write_text(requirements, encoding="utf-8")
+    _ensure_structured(
+        "prepare_requirements", config.model_prepare, requirements, checkpoint
+    )
     tasks = await _invoke(
         agent,
         run_dir,
         "prepare_tasks",
         config.model_tasks,
-        (with_format_source(TASKS_INSTRUCTION, config), spec, requirements),
+        (with_format_source(TASKS_INSTRUCTION, config, body), spec, requirements),
         journal,
         progress,
         checkpoint,

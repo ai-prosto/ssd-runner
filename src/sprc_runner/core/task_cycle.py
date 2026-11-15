@@ -68,6 +68,7 @@ class AttemptRecord:
     steps: list[StepRecord] = field(default_factory=list)
     implement_outcome: Outcome | None = None
     review_passed: bool = False
+    review_notes: str = ""
     tests_returncode: int | None = None
     tests_output_ref: str | None = None
     tests_command: str | None = None
@@ -130,18 +131,57 @@ def select_tasks(tasks_text: str) -> list[TaskRecord]:
     return [t for t in validate_tasks(tasks_text) if t.is_runnable]
 
 
+MAX_FEEDBACK_CHARS = 2000
+"""Хвост вывода тестов в фидбэке попытке: достаточно для причины, не раздувая вход."""
+
+
+def retry_feedback(
+    previous: "AttemptRecord | None", files: FilePort | None = None
+) -> str | None:
+    """Причина провала прошлой попытки — вход следующей (серия 3, 2026-11-15).
+
+    Без фидбэка повторная попытка слепо повторяла первую: рабочий каталог
+    откатывается к последнему коммиту, а вход реализации не менялся.
+    """
+    if previous is None or previous.success:
+        return None
+    parts = [
+        f"Попытка {previous.number} по этой задаче не принята. "
+        "Устрани перечисленные причины, не начинай решение заново без нужды:"
+    ]
+    if not previous.review_passed:
+        notes = previous.review_notes.strip()
+        parts.append("— Ревью отклонило изменение" + (f":\n{notes}" if notes else "."))
+    if previous.tests_returncode not in (None, 0):
+        tail = ""
+        if files is not None and previous.tests_output_ref:
+            try:
+                text = files.read_text(Path(previous.tests_output_ref))
+                tail = text[-MAX_FEEDBACK_CHARS:]
+            except OSError:
+                tail = ""
+        parts.append(
+            f"— Тесты завершились кодом {previous.tests_returncode}"
+            + (f"; хвост вывода:\n{tail}" if tail else ".")
+        )
+    if not previous.spec_checks_passed:
+        parts.append("— Проверки спецификации задачи не пройдены.")
+    return "\n".join(parts)
+
+
 def _request(
     stage: str,
     config: RunConfig,
     task: TaskRecord,
     workdir: Path,
     tools: tuple[str, ...],
+    extra: tuple[str, ...] = (),
 ) -> StageRequest:
     checklist = "\n".join(f"- {text}" for text, _ in task.checklist)
     return StageRequest(
         stage=stage,
         model=config.model_review if stage == STEP_REVIEW else config.model_implement,
-        inputs=(f"{task.id}: {task.name}", checklist),
+        inputs=(f"{task.id}: {task.name}", checklist, *extra),
         workdir=workdir,
         allowed_tools=tools,
         timeout_seconds=STEP_TIMEOUT_SECONDS,
@@ -164,6 +204,7 @@ async def run_attempt(
     charter_root: Path | None = None,
     files: FilePort | None = None,
     evidence_dir: Path | None = None,
+    previous: "AttemptRecord | None" = None,
 ) -> AttemptRecord:
     """Выполнить одну попытку: реализация → ревью → тесты → критерий успеха.
 
@@ -180,8 +221,16 @@ async def run_attempt(
     if journal:
         journal.start(EventType.ATTEMPT_STARTED, model=config.model_implement, **ident)
 
+    feedback = retry_feedback(previous, files)
     result = await agent.invoke(
-        _request(STEP_IMPLEMENT, config, task, workdir, IMPLEMENT_TOOLS)
+        _request(
+            STEP_IMPLEMENT,
+            config,
+            task,
+            workdir,
+            IMPLEMENT_TOOLS,
+            extra=(feedback,) if feedback else (),
+        )
     )
     record.implement_outcome = result.outcome
     record.add(STEP_IMPLEMENT, result.outcome.value)
@@ -198,6 +247,7 @@ async def run_attempt(
         _request(STEP_REVIEW, config, task, workdir, REVIEW_TOOLS)
     )
     record.review_passed = verdict.approved
+    record.review_notes = verdict.comments
     record.reviewer_id = verdict.reviewer_id
     record.add(STEP_REVIEW, "approved" if verdict.approved else "rejected")
     if journal:

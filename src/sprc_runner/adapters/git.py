@@ -19,6 +19,43 @@ class GitError(RuntimeError):
     """Команда git завершилась ошибкой."""
 
 
+def ensure_repo(target: Path) -> None:
+    """Целевой каталог вне git-репозитория инициализируется перед циклом задач.
+
+    Дифф-сторож, коммит и откат попытки опираются на git (NFR-02, NFR-05);
+    свежий POC-каталог (J-01) репозиторием не является — живой прогон
+    2026-11-14 падал на `rev-parse --show-toplevel`. Каталог внутри
+    существующего репозитория не трогается: дифф и коммиты идут в него,
+    как и раньше. Начальный пустой коммит — точка отката первой попытки.
+    """
+    probe = subprocess.run(
+        ["git", "-C", str(target), "rev-parse", "--git-dir"],
+        capture_output=True,
+        check=False,
+    )
+    if probe.returncode == 0:
+        return
+    for args in (
+        ["init", "-q", str(target)],
+        ["-C", str(target), "config", "user.name", "sprc-runner"],
+        ["-C", str(target), "config", "user.email", "runner@sprc-runner.local"],
+        [
+            "-C",
+            str(target),
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "sprc-runner: начальная точка прогона",
+        ],
+    ):
+        proc = subprocess.run(["git", *args], capture_output=True, check=False)
+        if proc.returncode != 0:
+            raise GitError(
+                f"git {' '.join(args)}: {proc.stderr.decode(errors='replace').strip()}"
+            )
+
+
 class GitRepo:
     """Реализация `GitPort`: репозиторий задан целевым каталогом и корнем устава."""
 
